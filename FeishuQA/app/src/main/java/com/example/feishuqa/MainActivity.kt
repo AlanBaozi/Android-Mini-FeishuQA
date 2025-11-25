@@ -11,12 +11,16 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
+import com.example.feishuqa.common.utils.JsonUtils
 import com.example.feishuqa.common.utils.theme.FeishuQATheme
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        // 在这里测试工具类
+        val jsonString = JsonUtils.readJson(this, "user.json")
+        android.util.Log.d("JsonTest", "json content = $jsonString")
         setContent {
             FeishuQATheme {
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
