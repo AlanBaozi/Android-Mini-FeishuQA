@@ -17,7 +17,7 @@ class LoginModel
      */
     fun loadUsers(context: Context): List<User>
     {
-        val jsonStr = JsonUtils.readJson(context, "user.json")
+        val jsonStr = JsonUtils.readJson(context, "user/user.json")
         if (jsonStr.isEmpty())
             return emptyList()
 

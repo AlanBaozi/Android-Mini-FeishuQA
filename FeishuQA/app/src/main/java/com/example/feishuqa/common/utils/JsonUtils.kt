@@ -1,11 +1,14 @@
 package com.example.feishuqa.common.utils
 
 import android.content.Context
+import org.json.JSONArray
+import org.json.JSONObject
 import java.io.BufferedReader
+import java.io.File
 import java.io.InputStreamReader
 
 /**
- * 读取本地JSON文件的工具类
+ * 读写JSON文件的工具类
  */
 object JsonUtils
 {
@@ -36,6 +39,74 @@ object JsonUtils
         {
             e.printStackTrace()
             ""
+        }
+    }
+
+
+    /**
+     * 读取内部存储 JSON 文件内容
+     *
+     * @param context 上下文，用于获取内部存储路径
+     * @param fileName 文件名，例如 "conversation_1.json"
+     *                 文件存放在内部存储目录：/data/data/com.example.feishuqa/files/
+     *                 通过View → Tool Windows → Device File Explorer查看
+     * @return 文件内容字符串，如果文件不存在或读取失败，则返回 "[]"
+     */
+    fun readJsonFromFiles(context: Context, fileName: String): String
+    {
+        return try
+        {
+            val file = File(context.filesDir, fileName)
+            if (!file.exists()) return "[]"
+            file.readText()
+        }
+        catch (e: Exception)
+        {
+            e.printStackTrace()
+            "[]"
+        }
+    }
+
+    /**
+     * 向内部存储 JSON 文件追加一个 JSONObject 对象
+     *
+     * @param context 上下文，用于获取内部存储路径
+     * @param fileName 文件名，例如 "conversation.json"
+     * @param newObject 要追加的新 JSON 对象
+     * @return Boolean
+     *         true：写入成功
+     *         false：写入失败（如解析失败或文件写入异常）
+     *
+     * 功能说明：
+     * - 如果文件不存在或为空，则创建一个新的 JSON 数组
+     * - 如果文件已存在且是 JSON 数组，则在数组末尾追加新对象
+     * - 写回文件时会覆盖原文件，但内容已包含原有数据 + 新对象
+     */
+    fun appendJsonObject(context: Context, fileName: String, newObject: JSONObject): Boolean
+    {
+        return try
+        {
+            // 读取原有内容
+            val content = readJsonFromFiles(context, fileName)
+            val jsonArray = if (content.isBlank()) {
+                JSONArray()  // 文件不存在或为空，创建空数组
+            } else {
+                JSONArray(content)  // 文件存在，解析已有数组
+            }
+
+            // 添加新对象
+            jsonArray.put(newObject)
+
+            // 写回文件
+            val file = File(context.filesDir, fileName)
+            file.writeText(jsonArray.toString())
+
+            true
+        }
+        catch (e: Exception)
+        {
+            e.printStackTrace()
+            false
         }
     }
 }
