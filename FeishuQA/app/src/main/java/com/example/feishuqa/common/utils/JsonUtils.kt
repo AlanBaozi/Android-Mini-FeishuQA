@@ -68,6 +68,38 @@ object JsonUtils
     }
 
     /**
+     * 覆盖写入 JSON 对象到内部存储文件（不追加，直接覆盖）
+     *
+     * @param context 上下文，用于获取内部存储路径（context.filesDir）
+     * @param fileName 文件名，例如 "conversation.json"
+     * @param jsonObject 要写入的 JSON 对象（会直接覆盖原内容）
+     *
+     * @return Boolean
+     *         true：写入成功
+     *         false：写入失败（发生异常）
+     *
+     * 功能说明：
+     * - 不读取旧文件内容，直接覆盖写入新的 JSONObject
+     * - 如果文件不存在会自动创建
+     * - 文件最终内容 = jsonObject.toString()
+     */
+    fun overwriteJsonObject(context: Context, fileName: String, jsonObject: JSONObject): Boolean
+    {
+        return try
+        {
+            val file = File(context.filesDir, fileName)
+            file.writeText(jsonObject.toString())   // 直接覆盖写入
+            true
+        }
+        catch (e: Exception)
+        {
+            e.printStackTrace()
+            false
+        }
+    }
+
+
+    /**
      * 向内部存储 JSON 文件追加一个 JSONObject 对象
      *
      * @param context 上下文，用于获取内部存储路径

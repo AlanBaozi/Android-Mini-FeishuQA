@@ -32,7 +32,7 @@ class MainActivity : ComponentActivity() {
         }
 
         // 调用 appendJsonObject 写入内部存储
-        val success = JsonUtils.appendJsonObject(this, fileName, newConversation)
+        val success = JsonUtils.overwriteJsonObject(this, fileName, newConversation)
         Log.d("JsonTest", "写入结果: $success")
 
         // 读取文件内容
