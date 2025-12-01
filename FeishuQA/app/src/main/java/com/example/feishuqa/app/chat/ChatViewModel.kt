@@ -18,7 +18,11 @@ data class ChatUiState(
     val isLoadingMore: Boolean = false,
     val isTyping: Boolean = false, // AI 是否正在输入
     val error: String? = null
-)
+) {
+    companion object {
+        val Empty = ChatUiState()
+    }
+}
 
 class ChatViewModel : ViewModel() {
 
@@ -36,8 +40,21 @@ class ChatViewModel : ViewModel() {
 
     fun loadMessages() {
         viewModelScope.launch {
-            val history = repository.getMessages(conversationId, page = 1)
-            _uiState.update { it.copy(messages = history) }
+            try {
+                _uiState.update { it.copy(isLoadingMore = true, error = null) }
+                
+                val history = repository.getMessages(conversationId, page = 1)
+                _uiState.update { it.copy(
+                    messages = history,
+                    isLoadingMore = false,
+                    error = null
+                ) }
+            } catch (e: Exception) {
+                _uiState.update { it.copy(
+                    isLoadingMore = false,
+                    error = "加载消息失败: ${e.message}"
+                ) }
+            }
         }
     }
 
@@ -81,7 +98,7 @@ class ChatViewModel : ViewModel() {
             conversationId = conversationId,
             senderId = "ai",
             type = MessageType.TEXT,
-            content = "...", // 初始占位符
+            content = "正在思考中...", // 初始占位符
             status = MessageStatus.TYPING
         )
 
@@ -89,25 +106,35 @@ class ChatViewModel : ViewModel() {
         _uiState.update { it.copy(isTyping = true) }
 
         viewModelScope.launch {
-            repository.streamAiResponse(userQuery, conversationId).collect { partialContent ->
-                // 更新消息内容
+            try {
+                repository.streamAiResponse(userQuery, conversationId).collect { partialContent ->
+                    // 更新消息内容
+                    _uiState.update { state ->
+                        val updatedList = state.messages.map { msg ->
+                            if (msg.id == aiMsgId) {
+                                msg.copy(content = partialContent, status = MessageStatus.TYPING)
+                            } else {
+                                msg
+                            }
+                        }
+                        state.copy(messages = updatedList, error = null)
+                    }
+                }
+                // 结束输入状态
                 _uiState.update { state ->
                     val updatedList = state.messages.map { msg ->
-                        if (msg.id == aiMsgId) {
-                            msg.copy(content = partialContent, status = MessageStatus.TYPING)
-                        } else {
-                            msg
-                        }
+                        if (msg.id == aiMsgId) msg.copy(status = MessageStatus.SENT) else msg
                     }
-                    state.copy(messages = updatedList)
+                    state.copy(messages = updatedList, isTyping = false)
                 }
-            }
-            // 结束输入状态
-            _uiState.update { state ->
-                val updatedList = state.messages.map { msg ->
-                    if (msg.id == aiMsgId) msg.copy(status = MessageStatus.SENT) else msg
+            } catch (e: Exception) {
+                // AI回复失败处理
+                _uiState.update { state ->
+                    val updatedList = state.messages.map { msg ->
+                        if (msg.id == aiMsgId) msg.copy(status = MessageStatus.FAILED) else msg
+                    }
+                    state.copy(messages = updatedList, isTyping = false, error = "AI回复失败: ${e.message}")
                 }
-                state.copy(messages = updatedList, isTyping = false)
             }
         }
     }
