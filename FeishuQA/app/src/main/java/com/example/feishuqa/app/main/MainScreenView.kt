@@ -25,7 +25,7 @@ fun MainScreenView(
         Log.d("TestLog", "UI: 开始监听事件...") // 打印到 Run 窗口
         viewModel.navigateToConversation.collect { conversationId ->
             // 收到事件！
-            Log.d("TestLog","UI: 🔥🔥🔥 终于收到了! ID: $conversationId")
+            Log.d("TestLog","UI: 收到了ID: $conversationId")
             // 这里执行跳转...
         }
     }

@@ -59,14 +59,14 @@ class MainScreenViewModel() : ViewModel()
             {
                 val conversationId = "conversation${System.currentTimeMillis()}"
 
-                // ⭐ 关键：切换到 IO 线程写文件，解决卡顿
+                // 关键：切换到 IO 线程写文件，解决卡顿
                 withContext(Dispatchers.IO)
                 {
                     model.createConversation(context, conversationId, title)
                     Log.d("TestLog", "2. 文件写入完成 (IO线程)")
                 }
 
-                // ⭐ 发送事件 (Channel)
+                // 发送事件 (Channel)
                 Log.d("TestLog", "3. 准备发送事件: $conversationId")
                 _navigateToConversation.emit(conversationId)
                 Log.d("TestLog", "4. 事件已发送")
@@ -74,7 +74,7 @@ class MainScreenViewModel() : ViewModel()
             }
             catch (e: Exception)
             {
-                Log.e("TestLog", "❌ 发生错误: ${e.message}", e)
+                Log.e("TestLog", "发生错误: ${e.message}", e)
             }
         }
     }
