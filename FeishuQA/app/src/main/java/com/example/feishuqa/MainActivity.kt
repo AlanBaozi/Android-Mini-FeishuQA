@@ -45,10 +45,10 @@ class MainActivity : ComponentActivity() {
                     color = MaterialTheme.colorScheme.background
                 ) {
                     // 直接展示聊天界面
-//                    ChatScreen(
-//                        onBackClick = { finish() }
-//                    )
-                    MainScreenView()
+                    ChatScreen(
+                        onBackClick = { finish() }
+                    )
+                    //MainScreenView()
                 }
             }
         }

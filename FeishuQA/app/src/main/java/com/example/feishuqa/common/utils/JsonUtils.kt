@@ -141,4 +141,65 @@ object JsonUtils
             false
         }
     }
+
+    /**
+     * 获取所有对话文件列表（遍历目录）
+     *
+     * @param context 上下文，用于获取内部存储路径
+     * @return 对话文件名列表，按文件名倒序排列（最新的在前）
+     */
+    fun getAllConversationFiles(context: Context): List<String>
+    {
+        return try
+        {
+            val filesDir = context.filesDir
+            val files = filesDir.listFiles()
+            files?.filter {
+                it.name.startsWith("conversation_") && it.name.endsWith(".json")
+            }?.map { it.name }
+                ?.sortedDescending()  // 按文件名倒序（时间戳大的在前）
+                ?: emptyList()
+        }
+        catch (e: Exception)
+        {
+            e.printStackTrace()
+            emptyList()
+        }
+    }
+
+    /**
+     * 从文件名提取对话 ID（时间戳）
+     *
+     * @param fileName 文件名，例如 "conversation_1703123456789.json"
+     * @return 对话 ID（时间戳字符串），例如 "1703123456789"
+     */
+    fun extractIdFromFileName(fileName: String): String
+    {
+        return fileName.removePrefix("conversation_").removeSuffix(".json")
+    }
+
+    /**
+     * 删除对话文件
+     *
+     * @param context 上下文
+     * @param fileName 文件名
+     * @return 是否删除成功
+     */
+    fun deleteConversationFile(context: Context, fileName: String): Boolean
+    {
+        return try
+        {
+            val file = File(context.filesDir, fileName)
+            if (file.exists()) {
+                file.delete()
+            } else {
+                true  // 文件不存在也算成功
+            }
+        }
+        catch (e: Exception)
+        {
+            e.printStackTrace()
+            false
+        }
+    }
 }

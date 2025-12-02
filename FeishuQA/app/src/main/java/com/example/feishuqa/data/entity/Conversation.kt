@@ -1,16 +1,20 @@
 package com.example.feishuqa.data.entity
 
 /**
- * 对话表数据类，对应 user.json 文件结构
+ * 对话实体类
  */
-
-data class Conversation
-(
-    val conversationId: Long,
+data class Conversation(
+    val id: String,  // 对话 ID（时间戳）
     val title: String,
-    val createTime: Long,
-    val updateTime: Long,
+    val lastMessage: String? = null,
+    val lastMessageTime: Long = System.currentTimeMillis(),
+    val messageCount: Int = 0,
     val isPinned: Boolean = false,
-    val isDeleted: Boolean = false,
-    val userId: Long
-)
+    val createdAt: Long = System.currentTimeMillis(),
+    val updatedTime: Long = System.currentTimeMillis(),
+    val userId: Int? = null
+) {
+    fun getDisplayTitle(): String {
+        return if (title.isBlank()) "新对话" else title
+    }
+}
