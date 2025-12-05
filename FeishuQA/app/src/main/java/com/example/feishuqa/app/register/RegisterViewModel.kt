@@ -4,9 +4,7 @@ import android.content.Context
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.feishuqa.app.login.LoginModel
 import com.example.feishuqa.data.entity.User
-import com.example.feishuqa.data.repository.AuthRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -17,8 +15,6 @@ import kotlinx.coroutines.launch
  * ViewModel层：处理注册业务逻辑
  */
 class RegisterViewModel(private val context: Context) : ViewModel() {
-
-    private val repository = AuthRepository(context)
 
     // LogicModel层
     private val model = RegisterModel(context)
@@ -131,4 +127,6 @@ data class RegisterUiState(
     val isLoading: Boolean = false,
     val error: String? = null
 )
+
+
 

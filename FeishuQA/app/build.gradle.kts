@@ -63,7 +63,13 @@ dependencies {
     implementation(libs.material)
     // Compose ConstraintLayout
     implementation(libs.androidx.constraintlayout.compose)
-    implementation(libs.appcompat)
+    // Activity KTX
+    implementation(libs.androidx.activity.ktx)
+    // 图片加载 (Glide) - 用于列表和预览显示
+    implementation(libs.glide)
+    // 百度语音SDK
+    implementation(files("libs/bdasr_V3_20250507_b610f20.jar"))
+    
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
@@ -71,11 +77,4 @@ dependencies {
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
     debugImplementation(libs.androidx.compose.ui.tooling)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
-    implementation(files("libs/bdasr_V3_20250507_b610f20.jar"))
-    // 图片加载 (Glide) - 用于列表和预览显示
-    implementation(libs.glide)
-    implementation(libs.androidx.constraintlayout)
-    implementation(libs.androidx.appcompat)
-    implementation(libs.material)
-    implementation(libs.androidx.activity.ktx)
 }
