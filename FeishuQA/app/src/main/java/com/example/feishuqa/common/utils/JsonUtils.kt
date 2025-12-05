@@ -98,6 +98,31 @@ object JsonUtils
         }
     }
 
+    /**
+     * 覆盖写入 JSON 对象到内部存储文件（同步，直接覆盖）
+     *
+     * @param context 上下文
+     * @param fileName 文件名
+     * @param jsonObject 要写入的 JSON 对象
+     *
+     * @return Boolean
+     */
+    fun overwriteJsonArray(context: Context, fileName: String, jsonArray: JSONArray): Boolean
+    {
+        return try
+        {
+            val file = File(context.filesDir, fileName)
+            // 核心操作：直接覆盖写入
+            file.writeText(jsonArray.toString()) // 使用传入的 JSONArray
+            true
+        }
+        catch (e: Exception)
+        {
+            e.printStackTrace()
+            false
+        }
+    }
+
 
     /**
      * 向内部存储 JSON 文件追加一个 JSONObject 对象
@@ -134,6 +159,36 @@ object JsonUtils
             file.writeText(jsonArray.toString())
 
             true
+        }
+        catch (e: Exception)
+        {
+            e.printStackTrace()
+            false
+        }
+    }
+
+    /**
+     * 删除对话文件
+     *
+     * @param context 上下文
+     * @param fileName 文件名
+     * @return 是否删除成功
+     *
+     * 可以删除文件，也可以删除空目录。
+     */
+    fun deleteJSONFile(context: Context, fileName: String): Boolean
+    {
+        return try
+        {
+            val file = File(context.filesDir, fileName)
+            if (file.exists())
+            {
+                file.delete()
+            }
+            else
+            {
+                true
+            }
         }
         catch (e: Exception)
         {
