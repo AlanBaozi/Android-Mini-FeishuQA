@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#99000000"> <!-- 半透明全屏遮罩 -->
+
+    <!-- 1. 底部拱形背景 (最底层) -->
+    <com.example.feishuqa.app.keyboard.ArcOverlayView
+        android:layout_width="match_parent"
+        android:layout_height="220dp"
+        android:layout_gravity="bottom" />
+
+    <!-- 2. 气泡容器 (中间层) -->
+    <LinearLayout
+        android:id="@+id/bubbleContainer"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom"
+        android:layout_marginBottom="160dp"
+        android:layout_marginHorizontal="24dp"
+        android:gravity="center_horizontal"
+        android:orientation="vertical">
+
+        <!-- 气泡本体 -->
+        <androidx.cardview.widget.CardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            app:cardBackgroundColor="#E6F0FF"
+            app:cardCornerRadius="16dp"
+            app:cardElevation="0dp">
+
+            <androidx.constraintlayout.widget.ConstraintLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:padding="20dp"
+                android:minHeight="110dp">
+
+                <!-- 实时文字 -->
+                <TextView
+                    android:id="@+id/tvStreamingText"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:text="..."
+                    android:textColor="#3370FF"
+                    android:textSize="18sp"
+                    android:textStyle="bold"
+                    android:lineSpacingExtra="4dp"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintEnd_toStartOf="@+id/barWaveView"
+                    app:layout_constraintTop_toTopOf="parent"
+                    app:layout_constraintBottom_toBottomOf="parent"
+                    app:layout_constraintHorizontal_bias="0"/>
+
+                <!-- 动态波纹 (放在右下角) -->
+                <com.example.feishuqa.app.keyboard.BarWaveView
+                    android:id="@+id/barWaveView"
+                    android:layout_width="60dp"
+                    android:layout_height="40dp"
+                    app:layout_constraintBottom_toBottomOf="parent"
+                    app:layout_constraintEnd_toEndOf="parent" />
+
+            </androidx.constraintlayout.widget.ConstraintLayout>
+        </androidx.cardview.widget.CardView>
+
+        <!-- 气泡下的小三角 -->
+        <View
+            android:layout_width="16dp"
+            android:layout_height="16dp"
+            android:layout_marginTop="-8dp"
+            android:background="#E6F0FF"
+            android:rotation="45" />
+
+    </LinearLayout>
+
+    <!-- 3. 提示文字 (在拱形之上) -->
+    <TextView
+        android:id="@+id/tvHintState"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|center_horizontal"
+        android:layout_marginBottom="110dp"
+        android:text="松开转文字，上滑取消"
+        android:textColor="#999999"
+        android:textSize="14sp" />
+
+    <!-- 4. 麦克风图标 (最顶层！解决遮挡问题) -->
+    <!-- 注意 marginBottom 要调整到适合 Activity 按钮的位置 -->
+    <ImageView
+        android:layout_width="56dp"
+        android:layout_height="56dp"
+        android:layout_gravity="bottom|center_horizontal"
+        android:layout_marginBottom="35dp"
+        android:padding="12dp"
+        android:src="@android:drawable/ic_btn_speak_now"
+        android:background="@drawable/shape_circle_white"
+        android:elevation="10dp"
+        app:tint="#666666" />
+    <!-- 这里的 shape_circle_white 是之前的白色圆形背景，为了让它更明显 -->
+
+</FrameLayout>

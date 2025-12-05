@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shape xmlns:android="http://schemas.android.com/apk/res/android">
+    <solid android:color="#FFFFFF"/>
+
+    <!-- AI 气泡：左上角尖角，其余圆角 -->
+    <corners
+        android:topLeftRadius="2dp"
+        android:bottomLeftRadius="12dp"
+        android:bottomRightRadius="12dp"
+        android:topRightRadius="12dp"/>
+</shape>

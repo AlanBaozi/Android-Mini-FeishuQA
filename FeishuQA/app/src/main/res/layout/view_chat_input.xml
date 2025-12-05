@@ -1,0 +1,124 @@
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="#F5F5F5"
+    android:padding="10dp">
+
+    <!-- 底部输入区域容器 -->
+    <LinearLayout
+        android:id="@+id/layoutInputContainer"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:background="#FFFFFF"
+        android:elevation="4dp"
+        app:layout_constraintBottom_toBottomOf="parent">
+
+        <!-- 待发送图片预览区域 (默认隐藏) -->
+        <FrameLayout
+            android:id="@+id/layoutPreview"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:padding="8dp"
+            android:background="#F0F0F0"
+            android:visibility="gone">
+
+            <!-- 图片容器 -->
+            <FrameLayout
+                android:layout_width="80dp"
+                android:layout_height="80dp">
+
+                <!-- 1. 预览图 -->
+                <ImageView
+                    android:id="@+id/ivPreview"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:scaleType="centerCrop"
+                    android:background="#DDDDDD"
+                    android:src="@mipmap/ic_launcher"/>
+
+                <!-- 2. 预览加载遮罩 (半透明黑) -->
+                <View
+                    android:id="@+id/viewPreviewMask"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:background="#66000000"
+                    android:visibility="gone"/>
+
+                <!-- 3. 预览加载进度条 -->
+                <ProgressBar
+                    android:id="@+id/pbPreviewLoading"
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:layout_gravity="center"
+                    android:indeterminateTint="#FFFFFF"
+                    android:visibility="gone"/>
+            </FrameLayout>
+            <!-- 撤回/删除图片按钮 (放在最外面，确保随时可点) -->
+            <ImageView
+                android:id="@+id/ivDeletePreview"
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:layout_gravity="top|start"
+                android:layout_marginLeft="65dp"
+                android:layout_marginTop="-4dp"
+                android:background="@drawable/shape_circle_white"
+                android:src="@android:drawable/ic_menu_close_clear_cancel"
+                android:padding="4dp"
+                app:tint="#666666"/>
+        </FrameLayout>
+
+        <!-- 输入栏 -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="bottom"
+            android:padding="8dp">
+
+            <!-- 语音按钮 -->
+            <ImageView
+                android:id="@+id/btnVoice"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:padding="8dp"
+                android:src="@android:drawable/ic_btn_speak_now"
+                app:tint="#666666"/>
+
+            <!-- 图片按钮 -->
+            <ImageView
+                android:id="@+id/btnImage"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:padding="8dp"
+                android:src="@android:drawable/ic_menu_gallery"
+                app:tint="#666666"/>
+
+            <!-- 输入框 -->
+            <EditText
+                android:id="@+id/etInput"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:minHeight="40dp"
+                android:maxLines="4"
+                android:background="@drawable/shape_input_bg"
+                android:paddingHorizontal="12dp"
+                android:paddingVertical="8dp"
+                android:hint="输入消息..."
+                android:textSize="16sp"/>
+
+            <!-- 发送按钮 -->
+            <ImageView
+                android:id="@+id/btnSend"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:padding="8dp"
+                android:layout_marginStart="4dp"
+                android:src="@android:drawable/ic_menu_send"
+                app:tint="#007AFF"/>
+        </LinearLayout>
+    </LinearLayout>
+</androidx.constraintlayout.widget.ConstraintLayout>

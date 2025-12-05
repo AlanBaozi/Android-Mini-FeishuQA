@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shape xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- 微信/通义风格的浅绿色，如果是纯通义风格也可以换成 #007AFF (蓝) -->
+    <solid android:color="#95EC69"/>
+
+    <!-- 圆角设置：左上、左下、右下为12dp，右上为2dp，形成气泡指向右侧的效果 -->
+    <corners
+        android:topLeftRadius="12dp"
+        android:bottomLeftRadius="12dp"
+        android:bottomRightRadius="12dp"
+        android:topRightRadius="2dp"/>
+</shape>

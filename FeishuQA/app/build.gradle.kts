@@ -70,4 +70,11 @@ dependencies {
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
     debugImplementation(libs.androidx.compose.ui.tooling)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
+    implementation(files("libs/bdasr_V3_20250507_b610f20.jar"))
+    // 图片加载 (Glide) - 用于列表和预览显示
+    implementation(libs.glide)
+    implementation(libs.androidx.constraintlayout)
+    implementation(libs.androidx.appcompat)
+    implementation(libs.material)
+    implementation(libs.androidx.activity.ktx)
 }
