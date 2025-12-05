@@ -1,8 +1,10 @@
 package com.example.feishuqa.app.register
 
 import android.content.Context
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.feishuqa.app.login.LoginModel
 import com.example.feishuqa.data.entity.User
 import com.example.feishuqa.data.repository.AuthRepository
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -17,6 +19,9 @@ import kotlinx.coroutines.launch
 class RegisterViewModel(private val context: Context) : ViewModel() {
 
     private val repository = AuthRepository(context)
+
+    // LogicModel层
+    private val model = RegisterModel(context)
 
     // UI状态
     private val _uiState = MutableStateFlow(RegisterUiState())
@@ -85,7 +90,8 @@ class RegisterViewModel(private val context: Context) : ViewModel() {
 
         viewModelScope.launch {
             _uiState.value = currentState.copy(isLoading = true, error = null)
-            val result = repository.register(currentState.account, currentState.password)
+            val result = model.register(currentState.account, currentState.password)
+            Log.d("testRegister", "result = $result")
             result.onSuccess { user ->
                 _uiState.value = currentState.copy(isLoading = false)
                 _registerSuccess.value = user

@@ -68,7 +68,7 @@ class LoginViewModel(private val context: Context) : ViewModel()
         viewModelScope.launch {
             _uiState.value = currentState.copy(isLoading = true, error = null)
             val result = model.login(currentState.username, currentState.password)
-            Log.d("testLogic", "result = $result")
+            Log.d("testLogin", "result = $result")
             result.onSuccess { user ->
                 _uiState.value = currentState.copy(isLoading = false)
                 _loginSuccess.value = user

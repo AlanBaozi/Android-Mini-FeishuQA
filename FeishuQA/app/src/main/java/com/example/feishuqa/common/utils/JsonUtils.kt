@@ -98,6 +98,32 @@ object JsonUtils
         }
     }
 
+    /**
+     * 覆盖写入 JSON 对象到内部存储文件（同步，直接覆盖）
+     *
+     * @param context 上下文
+     * @param fileName 文件名
+     * @param jsonObject 要写入的 JSON 对象
+     *
+     * @return Boolean
+     */
+    // 函数签名和参数名改为 JSONArray
+    fun overwriteJsonArray(context: Context, fileName: String, jsonArray: JSONArray): Boolean
+    {
+        return try
+        {
+            val file = File(context.filesDir, fileName)
+            // 核心操作：直接覆盖写入
+            file.writeText(jsonArray.toString()) // 使用传入的 JSONArray
+            true
+        }
+        catch (e: Exception)
+        {
+            e.printStackTrace()
+            false
+        }
+    }
+
 
     /**
      * 向内部存储 JSON 文件追加一个 JSONObject 对象
