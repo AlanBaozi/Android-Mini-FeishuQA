@@ -1,4 +1,4 @@
-package com.zjl.myapplication
+package com.example.feishuqa.app.keyboard
 
 import android.Manifest
 import android.app.Dialog
@@ -15,10 +15,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import com.bumptech.glide.Glide
 import com.example.feishuqa.R
-import com.example.feishuqa.app.keyboard.ChatViewModelFactory
 import com.example.feishuqa.data.repository.ChatRepositoryExample
-import com.zjl.myapplication.test.ChatDisplayView
-import com.zjl.myapplication.test.ChatInputView
 
 class MainActivity : AppCompatActivity() {
 
@@ -52,20 +49,44 @@ class MainActivity : AppCompatActivity() {
         // 设置回调
         chatDisplayView.onImageClick = { model -> showFullImageDialog(model) }
 
+        // 【修改点】实现 ActionListener 接口的所有方法，包括新增的两个
         chatInputView.setActionListener(object : ChatInputView.ActionListener {
+
+            // 1. 录音权限请求
             override fun requestRecordAudioPermission(): Boolean {
                 if (ContextCompat.checkSelfPermission(this@MainActivity, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) return true
                 permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
                 return false
             }
-            override fun openImagePicker() { pickImageLauncher.launch("image/*") }
-            override fun onPreviewImageClick(uri: Any) { showFullImageDialog(uri) }
+
+            // 2. 打开相册
+            override fun openImagePicker() {
+                pickImageLauncher.launch("image/*")
+            }
+
+            // 3. 预览小图点击
+            override fun onPreviewImageClick(uri: Any) {
+                showFullImageDialog(uri)
+            }
+
+            // 4. 【新增】点击联网搜索
+            override fun onWebSearchClick() {
+                Toast.makeText(this@MainActivity, "点击了联网搜索", Toast.LENGTH_SHORT).show()
+                // TODO: 在这里处理开启/关闭联网搜索的逻辑
+            }
+
+            // 5. 【新增】点击模型选择
+            override fun onModelSelectClick() {
+                Toast.makeText(this@MainActivity, "点击了模型选择", Toast.LENGTH_SHORT).show()
+                // TODO: 在这里弹出 BottomSheetDialog 让用户切换模型
+            }
         })
     }
 
     private fun showFullImageDialog(model: Any) {
         val dialog = Dialog(this)
         dialog.requestWindowFeature(Window.FEATURE_NO_TITLE)
+        // 确保布局存在：你需要创建一个简单的 dialog_image_preview.xml 或直接用代码生成 ImageView
         dialog.setContentView(R.layout.dialog_image_preview)
         dialog.window?.setBackgroundDrawable(ColorDrawable(Color.BLACK))
         dialog.window?.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)

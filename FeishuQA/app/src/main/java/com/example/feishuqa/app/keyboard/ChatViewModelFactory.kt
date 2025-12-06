@@ -3,8 +3,6 @@ package com.example.feishuqa.app.keyboard
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import com.example.feishuqa.data.repository.ChatRepositoryExample
-import com.zjl.myapplication.test.ChatDisplayViewModel
-import com.zjl.myapplication.test.ChatInputViewModel
 import kotlin.jvm.java
 
 // --- 通用工厂类 (用于注入 Repository) ---

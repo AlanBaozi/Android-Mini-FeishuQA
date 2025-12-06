@@ -1,5 +1,4 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- 底部输入栏布局 - 支持语音/文字切换 -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
@@ -9,14 +8,14 @@
     android:paddingTop="8dp"
     android:paddingBottom="24dp">
 
-    <!-- 第一行：功能按钮区域（联网搜索 + 模型选择） -->
+    <!-- 第一行：顶部功能胶囊 (保持不变) -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
         android:gravity="center_vertical"
         android:paddingHorizontal="16dp"
-        android:paddingVertical="4dp">
+        android:paddingVertical="8dp">
 
         <!-- 联网搜索按钮 -->
         <LinearLayout
@@ -26,15 +25,15 @@
             android:orientation="horizontal"
             android:gravity="center_vertical"
             android:background="@drawable/bg_chip_normal"
-            android:paddingHorizontal="12dp"
-            android:paddingVertical="6dp"
+            android:paddingHorizontal="10dp"
+            android:paddingVertical="5dp"
             android:clickable="true"
             android:focusable="true">
 
             <ImageView
                 android:id="@+id/ic_web_search"
-                android:layout_width="16dp"
-                android:layout_height="16dp"
+                android:layout_width="14dp"
+                android:layout_height="14dp"
                 android:src="@drawable/ic_globe"
                 android:contentDescription="联网搜索" />
 
@@ -46,7 +45,6 @@
                 android:text="联网搜索"
                 android:textColor="#646A73"
                 android:textSize="12sp" />
-
         </LinearLayout>
 
         <Space
@@ -61,8 +59,8 @@
             android:orientation="horizontal"
             android:gravity="center_vertical"
             android:background="@drawable/bg_chip_normal"
-            android:paddingHorizontal="12dp"
-            android:paddingVertical="6dp"
+            android:paddingHorizontal="10dp"
+            android:paddingVertical="5dp"
             android:clickable="true"
             android:focusable="true">
 
@@ -75,106 +73,176 @@
                 android:textSize="12sp" />
 
             <ImageView
-                android:layout_width="16dp"
-                android:layout_height="16dp"
+                android:layout_width="14dp"
+                android:layout_height="14dp"
                 android:layout_marginStart="4dp"
                 android:src="@drawable/ic_arrow_down"
                 android:contentDescription="选择模型" />
-
         </LinearLayout>
 
     </LinearLayout>
 
-    <!-- 第二行：输入框主体 -->
+
+    <!-- 第二行：主体输入区域 (全包裹样式) -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:gravity="center_vertical"
-        android:paddingHorizontal="12dp"
-        android:paddingVertical="8dp">
+        android:paddingHorizontal="16dp"> <!-- 左右留白 -->
 
-        <!-- 左侧：附件上传按钮 -->
-        <ImageButton
-            android:id="@+id/btn_attach"
-            android:layout_width="36dp"
-            android:layout_height="36dp"
-            android:src="@drawable/ic_attach"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:contentDescription="上传附件"
-            android:scaleType="centerInside" />
-
-        <Space
-            android:layout_width="4dp"
-            android:layout_height="match_parent" />
-
-        <!-- 语音/键盘切换按钮 -->
-        <ImageButton
-            android:id="@+id/btn_toggle_input_mode"
-            android:layout_width="36dp"
-            android:layout_height="36dp"
-            android:src="@drawable/ic_mic"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:contentDescription="切换输入模式"
-            android:scaleType="centerInside" />
-
-        <Space
-            android:layout_width="4dp"
-            android:layout_height="match_parent" />
-
-        <!-- 输入区域容器 -->
-        <FrameLayout
-            android:layout_width="0dp"
+        <!-- ★★★ 统一的大容器：背景在这里 ★★★ -->
+        <LinearLayout
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_weight="1">
+            android:orientation="vertical"
+            android:background="@drawable/bg_input_unified"
+            android:padding="8dp"
+            android:animateLayoutChanges="true">
 
-            <!-- 文字输入框 -->
-            <EditText
-                android:id="@+id/et_input"
+            <!-- 区域 A: 图片预览 (默认隐藏) -->
+            <!-- layout_gravity="start" 确保图片靠左显示 -->
+            <FrameLayout
+                android:id="@+id/layoutPreview"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="start"
+                android:layout_marginStart="4dp"
+                android:layout_marginBottom="4dp"
+                android:clipChildren="false"
+                android:visibility="gone">
+
+                <!-- 图片圆角卡片 -->
+                <androidx.cardview.widget.CardView
+                    android:layout_width="60dp"
+                    android:layout_height="60dp"
+                    android:layout_marginTop="6dp"
+                    android:layout_marginEnd="6dp"
+                    app:cardCornerRadius="8dp"
+                    app:cardElevation="0dp"
+                    app:cardBackgroundColor="#E0E0E0">
+
+                    <ImageView
+                        android:id="@+id/ivPreview"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:scaleType="centerCrop" />
+
+                    <!-- Loading 遮罩 -->
+                    <FrameLayout
+                        android:id="@+id/layoutPreviewLoading"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:background="#66000000"
+                        android:visibility="gone">
+                        <ProgressBar
+                            android:id="@+id/pbPreviewLoading"
+                            android:layout_width="16dp"
+                            android:layout_height="16dp"
+                            android:layout_gravity="center"
+                            android:indeterminateTint="#FFFFFF" />
+                    </FrameLayout>
+                </androidx.cardview.widget.CardView>
+
+                <!-- 删除按钮 (右上角) -->
+                <FrameLayout
+                    android:id="@+id/btnDeletePreview"
+                    android:layout_width="18dp"
+                    android:layout_height="18dp"
+                    android:layout_gravity="top|end"
+                    android:background="@drawable/bg_close_btn_circle"
+                    android:elevation="2dp">
+                    <ImageView
+                        android:layout_width="8dp"
+                        android:layout_height="8dp"
+                        android:layout_gravity="center"
+                        android:src="@drawable/ic_close_small"
+                        app:tint="#FFFFFF" />
+                </FrameLayout>
+            </FrameLayout>
+
+            <!-- 区域 B: 操作行 (附件 + 语音 + 输入框 + 发送) -->
+            <!-- orientation="horizontal" 让它们排成一行 -->
+            <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:minHeight="40dp"
-                android:maxLines="5"
-                android:background="@drawable/bg_input_field"
-                android:paddingHorizontal="16dp"
-                android:paddingVertical="10dp"
-                android:hint="问个问题，或用知识写点内容"
-                android:textColor="#1F2329"
-                android:textColorHint="#8F959E"
-                android:textSize="16sp"
-                android:inputType="textMultiLine"
-                android:importantForAutofill="no"
-                android:visibility="visible" />
+                android:orientation="horizontal"
+                android:gravity="bottom"> <!-- 底部对齐，防止输入框变高时图标乱跑 -->
 
-            <!-- 语音输入按钮（长按说话） -->
-            <TextView
-                android:id="@+id/btn_voice_input"
-                android:layout_width="match_parent"
-                android:layout_height="40dp"
-                android:background="@drawable/bg_voice_button"
-                android:gravity="center"
-                android:text="按住 说话"
-                android:textColor="#1F2329"
-                android:textSize="16sp"
-                android:visibility="gone" />
+                <!-- 1. 附件按钮 -->
+                <ImageButton
+                    android:id="@+id/btn_attach"
+                    android:layout_width="32dp"
+                    android:layout_height="32dp"
+                    android:layout_marginBottom="4dp"
+                    android:src="@drawable/ic_attach"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:scaleType="centerInside"
+                    app:tint="#5F6368" />
 
-        </FrameLayout>
+                <Space android:layout_width="4dp" android:layout_height="wrap_content"/>
 
-        <Space
-            android:layout_width="8dp"
-            android:layout_height="match_parent" />
+                <!-- 2. 语音切换按钮 -->
+                <ImageButton
+                    android:id="@+id/btn_toggle_input_mode"
+                    android:layout_width="32dp"
+                    android:layout_height="32dp"
+                    android:layout_marginBottom="4dp"
+                    android:src="@drawable/ic_mic"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:scaleType="centerInside"
+                    app:tint="#5F6368" />
 
-        <!-- 右侧：发送按钮 -->
-        <ImageButton
-            android:id="@+id/btn_send"
-            android:layout_width="36dp"
-            android:layout_height="36dp"
-            android:src="@drawable/ic_send"
-            android:background="@drawable/bg_send_button"
-            android:contentDescription="发送"
-            android:scaleType="centerInside"
-            android:padding="8dp"
-            android:visibility="gone" />
+                <Space android:layout_width="8dp" android:layout_height="wrap_content"/>
+
+                <!-- 3. 输入框 / 语音按钮 (权重设为1，占满中间) -->
+                <FrameLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1">
+
+                    <EditText
+                        android:id="@+id/et_input"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:minHeight="40dp"
+                        android:maxLines="5"
+                        android:background="@null"
+                        android:paddingVertical="10dp"
+                        android:hint="问点什么..."
+                        android:textColor="#1F2329"
+                        android:textColorHint="#9CA3AF"
+                        android:textSize="16sp"
+                        android:inputType="textMultiLine" />
+
+                    <TextView
+                        android:id="@+id/btn_voice_input"
+                        android:layout_width="match_parent"
+                        android:layout_height="40dp"
+                        android:gravity="center"
+                        android:text="按住 说话"
+                        android:textColor="#1F2329"
+                        android:background="@drawable/bg_voice_button"
+                        android:visibility="gone" />
+                </FrameLayout>
+
+                <Space android:layout_width="8dp" android:layout_height="wrap_content"/>
+
+                <!-- 4. 发送按钮 (现在也在大盒子里了) -->
+                <ImageButton
+                    android:id="@+id/btn_send"
+                    android:layout_width="32dp"
+                    android:layout_height="32dp"
+                    android:layout_marginBottom="4dp"
+                    android:src="@drawable/ic_send"
+                    android:background="@drawable/bg_send_button"
+                    android:padding="8dp"
+                    android:scaleType="centerInside"
+                    android:visibility="gone"
+                    app:tint="#FFFFFF" />
+                <!-- 注意：如果你的 bg_send_button 是深色的，这里 tint 设为白色；如果是浅色，设为深色 -->
+
+            </LinearLayout>
+
+        </LinearLayout>
 
     </LinearLayout>
 

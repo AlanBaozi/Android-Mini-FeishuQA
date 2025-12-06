@@ -24,15 +24,15 @@
         </activity>
         <meta-data
             android:name="com.baidu.speech.APP_ID"
-            android:value="***" /> <!-- 填你的 AppID -->
+            android:value="*" /> <!-- 填你的 AppID -->
 
         <meta-data
             android:name="com.baidu.speech.API_KEY"
-            android:value="***" />
+            android:value="*" />
 
         <meta-data
             android:name="com.baidu.speech.SECRET_KEY"
-            android:value="***" />
+            android:value="*" />
         
         <!-- 登录界面 -->
         <activity

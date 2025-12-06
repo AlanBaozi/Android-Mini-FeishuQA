@@ -16,6 +16,7 @@ import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.feishuqa.R
 import com.example.feishuqa.adapter.HistoryConversationAdapter
+import com.example.feishuqa.app.keyboard.ChatInputView
 import com.example.feishuqa.app.login.LoginActivity
 import com.example.feishuqa.data.entity.AIModel
 import com.example.feishuqa.databinding.ActivityMainBinding
@@ -31,12 +32,14 @@ class MainView(
     private val context: Context,
     private val binding: ActivityMainBinding,
     private val drawerBinding: LayoutDrawerBinding,
-    private val inputBarBinding: LayoutInputBarBinding,
+    private val chatInputView: ChatInputView,
     private val viewModel: MainViewModel,
     private val lifecycleOwner: LifecycleOwner
 ) {
 
     private lateinit var historyAdapter: HistoryConversationAdapter
+
+
 
     /**
      * 初始化View
@@ -47,7 +50,7 @@ class MainView(
         
         setupTopBar()
         setupDrawer()
-        setupInputBar()
+        //setupInputBar() 已经被chatinputview内部接管
         observeViewModel()
         startLogoAnimation()
     }
@@ -148,69 +151,7 @@ class MainView(
             .show()
     }
 
-    /**
-     * 设置输入栏
-     */
-    @Suppress("ClickableViewAccessibility")
-    private fun setupInputBar() {
-        // 联网搜索按钮
-        inputBarBinding.btnWebSearch.setOnClickListener {
-            viewModel.toggleWebSearch()
-        }
 
-        // 模型选择按钮
-        inputBarBinding.btnModelSelect.setOnClickListener {
-            showModelSelectorDialog()
-        }
-
-        // 附件上传按钮
-        inputBarBinding.btnAttach.setOnClickListener {
-            Toast.makeText(context, "上传附件", Toast.LENGTH_SHORT).show()
-        }
-
-        // 语音/键盘切换按钮
-        inputBarBinding.btnToggleInputMode.setOnClickListener {
-            viewModel.toggleInputMode()
-        }
-
-        // 语音输入按钮（长按说话）
-        inputBarBinding.btnVoiceInput.setOnTouchListener { v, event ->
-            when (event.action) {
-                android.view.MotionEvent.ACTION_DOWN -> {
-                    v.setBackgroundResource(R.drawable.bg_voice_button_pressed)
-                    (v as? android.widget.TextView)?.text = "松开 发送"
-                    Toast.makeText(context, "开始录音...", Toast.LENGTH_SHORT).show()
-                    true
-                }
-                android.view.MotionEvent.ACTION_UP, android.view.MotionEvent.ACTION_CANCEL -> {
-                    v.setBackgroundResource(R.drawable.bg_voice_button)
-                    (v as? android.widget.TextView)?.text = "按住 说话"
-                    Toast.makeText(context, "录音结束，发送语音", Toast.LENGTH_SHORT).show()
-                    true
-                }
-                else -> false
-            }
-        }
-
-        // 发送按钮
-        inputBarBinding.btnSend.setOnClickListener {
-            val text = inputBarBinding.etInput.text.toString()
-            if (text.isNotBlank()) {
-                viewModel.sendMessage(text)
-                inputBarBinding.etInput.setText("")
-            }
-        }
-
-        // 监听输入框文字变化
-        inputBarBinding.etInput.addTextChangedListener(object : TextWatcher {
-            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
-            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
-            override fun afterTextChanged(s: Editable?) {
-                val hasText = !s.isNullOrBlank()
-                inputBarBinding.btnSend.visibility = if (hasText) View.VISIBLE else View.GONE
-            }
-        })
-    }
 
     /**
      * 观察ViewModel状态变化
@@ -251,31 +192,24 @@ class MainView(
             drawerBinding.layoutEmptyState.visibility = View.GONE
         }
 
-        // 更新联网搜索状态
+        // 更新 ChatInputView 上的状态显示 (模型名称、联网高亮)
+        val tvSelectedModel = chatInputView.findViewById<android.widget.TextView>(R.id.tv_selected_model)
+        val btnWebSearch = chatInputView.findViewById<android.view.View>(R.id.btn_web_search)
+        val tvWebSearch = chatInputView.findViewById<android.widget.TextView>(R.id.tv_web_search)
+        val icWebSearch = chatInputView.findViewById<android.widget.ImageView>(R.id.ic_web_search)
+
+        // 安全判空，防止ID改了导致崩溃
+        tvSelectedModel?.text = state.selectedModel.name
+
         if (state.isWebSearchEnabled) {
-            inputBarBinding.btnWebSearch.setBackgroundResource(R.drawable.bg_chip_selected)
-            inputBarBinding.tvWebSearch.setTextColor(context.getColor(R.color.feishu_blue))
-            inputBarBinding.icWebSearch.setColorFilter(context.getColor(R.color.feishu_blue))
+            btnWebSearch?.setBackgroundResource(R.drawable.bg_chip_selected)
+            tvWebSearch?.setTextColor(context.getColor(R.color.feishu_blue))
+            icWebSearch?.setColorFilter(context.getColor(R.color.feishu_blue))
         } else {
-            inputBarBinding.btnWebSearch.setBackgroundResource(R.drawable.bg_chip_normal)
-            inputBarBinding.tvWebSearch.setTextColor(context.getColor(R.color.text_secondary))
-            inputBarBinding.icWebSearch.setColorFilter(context.getColor(R.color.text_secondary))
+            btnWebSearch?.setBackgroundResource(R.drawable.bg_chip_normal)
+            tvWebSearch?.setTextColor(context.getColor(R.color.text_secondary))
+            icWebSearch?.setColorFilter(context.getColor(R.color.text_secondary))
         }
-
-        // 更新输入模式
-        if (state.isTextInputMode) {
-            inputBarBinding.btnToggleInputMode.setImageResource(R.drawable.ic_mic)
-            inputBarBinding.etInput.visibility = View.VISIBLE
-            inputBarBinding.btnVoiceInput.visibility = View.GONE
-        } else {
-            inputBarBinding.btnToggleInputMode.setImageResource(R.drawable.ic_keyboard)
-            inputBarBinding.etInput.visibility = View.GONE
-            inputBarBinding.btnVoiceInput.visibility = View.VISIBLE
-            inputBarBinding.btnSend.visibility = View.GONE
-        }
-
-        // 更新模型显示
-        inputBarBinding.tvSelectedModel.text = state.selectedModel.name
 
         // 显示错误
         state.error?.let {
@@ -287,7 +221,7 @@ class MainView(
     /**
      * 显示模型选择对话框
      */
-    private fun showModelSelectorDialog() {
+    fun showModelSelectorDialog() {
         val dialogView = android.view.LayoutInflater.from(context)
             .inflate(R.layout.dialog_model_selector, null)
         val radioGroup = dialogView.findViewById<RadioGroup>(R.id.rg_models)

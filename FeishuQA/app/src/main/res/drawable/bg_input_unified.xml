@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shape xmlns:android="http://schemas.android.com/apk/res/android">
+    <solid android:color="#FFFFFF" />
+    <!-- 1dp 的灰色边框，统一视觉 -->
+    <stroke
+        android:width="1dp"
+        android:color="#E4E7ED" />
+    <!-- 较大的圆角，看起来更圆润 -->
+    <corners android:radius="18dp" />
+</shape>
