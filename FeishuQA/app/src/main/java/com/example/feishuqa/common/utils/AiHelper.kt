@@ -29,11 +29,11 @@ object AiHelper
     }
 
     // DeepSeek 配置
-    private const val DEEPSEEK_API_KEY = "sk-61edf5f023ab4e35b87caed9ad01b376"
+    private const val DEEPSEEK_API_KEY = "*"
     private const val DEEPSEEK_URL = "https://api.deepseek.com/chat/completions"
 
     // 豆包配置
-    private const val DOUBAO_API_KEY = "6003792b-00c7-4fbe-a567-559ede3e5cc9" // 火山引擎 Key
+    private const val DOUBAO_API_KEY = "*" // 火山引擎 Key
     private const val DOUBAO_URL = "https://ark.cn-beijing.volces.com/api/v3/chat/completions"
     private const val DOUBAO_ENDPOINT_ID = "ep-20251207164500-g58ww" // 模型接入点 ID
 
