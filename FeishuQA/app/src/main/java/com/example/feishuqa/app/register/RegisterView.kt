@@ -1,5 +1,6 @@
 package com.example.feishuqa.app.register
 
+import android.app.AlertDialog
 import android.content.Context
 import android.text.method.HideReturnsTransformationMethod
 import android.text.method.PasswordTransformationMethod
@@ -68,6 +69,10 @@ class RegisterView(
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
             override fun afterTextChanged(s: android.text.Editable?) {
                 viewModel.updateAccount(s?.toString() ?: "")
+                // 输入内容时清除错误状态
+                if (!s.isNullOrBlank()) {
+                    viewModel.clearAccountError()
+                }
             }
         })
 
@@ -77,6 +82,10 @@ class RegisterView(
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
             override fun afterTextChanged(s: android.text.Editable?) {
                 viewModel.updatePassword(s?.toString() ?: "")
+                // 输入内容时清除错误状态
+                if (!s.isNullOrBlank()) {
+                    viewModel.clearPasswordError()
+                }
             }
         })
 
@@ -86,8 +95,26 @@ class RegisterView(
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
             override fun afterTextChanged(s: android.text.Editable?) {
                 viewModel.updateConfirmPassword(s?.toString() ?: "")
+                // 输入内容时清除错误状态
+                if (!s.isNullOrBlank()) {
+                    viewModel.clearConfirmPasswordError()
+                }
             }
         })
+
+        // 密码输入框获得焦点时，检查账号是否为空
+        binding.etPassword.setOnFocusChangeListener { _, hasFocus ->
+            if (hasFocus) {
+                viewModel.validateAccountOnFocusChange()
+            }
+        }
+
+        // 确认密码输入框获得焦点时，检查账号和密码是否为空
+        binding.etConfirmPassword.setOnFocusChangeListener { _, hasFocus ->
+            if (hasFocus) {
+                viewModel.validatePasswordOnFocusChange()
+            }
+        }
     }
 
     /**
@@ -97,16 +124,20 @@ class RegisterView(
         lifecycleOwner.lifecycleScope.launch {
             lifecycleOwner.repeatOnLifecycle(androidx.lifecycle.Lifecycle.State.STARTED) {
                 // 观察UI状态
-                viewModel.uiState.collect { state ->
-                    updateUI(state)
+                launch {
+                    viewModel.uiState.collect { state ->
+                        updateUI(state)
+                    }
                 }
 
                 // 观察注册成功事件
-                viewModel.registerSuccess.collect { user ->
-                    user?.let {
-                        Toast.makeText(context, "注册成功", Toast.LENGTH_SHORT).show()
-                        viewModel.clearRegisterSuccess()
-                        (context as? android.app.Activity)?.finish()
+                launch {
+                    viewModel.registerSuccess.collect { user ->
+                        user?.let {
+                            Toast.makeText(context, "注册成功", Toast.LENGTH_SHORT).show()
+                            viewModel.clearRegisterSuccess()
+                            (context as? android.app.Activity)?.finish()
+                        }
                     }
                 }
             }
@@ -145,11 +176,59 @@ class RegisterView(
             binding.btnRegister.text = "注册"
         }
 
-        // 显示错误
+        // 更新账号输入框的高亮状态
+        if (state.accountError) {
+            binding.layoutAccount.setBackgroundResource(R.drawable.bg_input_underline_error)
+        } else {
+            binding.layoutAccount.setBackgroundResource(R.drawable.bg_input_underline)
+        }
+
+        // 更新密码输入框的高亮状态
+        if (state.passwordError) {
+            binding.layoutPassword.setBackgroundResource(R.drawable.bg_input_underline_error)
+        } else {
+            binding.layoutPassword.setBackgroundResource(R.drawable.bg_input_underline)
+        }
+
+        // 更新确认密码输入框的高亮状态
+        if (state.confirmPasswordError) {
+            binding.layoutConfirmPassword.setBackgroundResource(R.drawable.bg_input_underline_error)
+        } else {
+            binding.layoutConfirmPassword.setBackgroundResource(R.drawable.bg_input_underline)
+        }
+
+        // 显示弹窗错误
+        state.dialogError?.let {
+            showErrorDialog(it)
+            viewModel.clearDialogError()
+        }
+
+        // 显示Toast错误（保留兼容）
         state.error?.let {
             Toast.makeText(context, it, Toast.LENGTH_SHORT).show()
             viewModel.clearError()
         }
+    }
+
+    /**
+     * 显示错误弹窗
+     */
+    private fun showErrorDialog(message: String) {
+        AlertDialog.Builder(context)
+            .setTitle("提示")
+            .setMessage(message)
+            .setPositiveButton("确定", null)
+            .show()
+    }
+
+    /**
+     * 清空所有输入（从其他界面返回时调用）
+     */
+    fun clearInputs() {
+        binding.etAccount.setText("")
+        binding.etPassword.setText("")
+        binding.etConfirmPassword.setText("")
+        viewModel.clearAllInputs()
     }
 
     /**
@@ -168,7 +247,3 @@ class RegisterView(
         binding.ivLogo.startAnimation(rotateAnimation)
     }
 }
-
-
-
-

@@ -2,11 +2,13 @@ package com.example.feishuqa.app.main
 
 import android.app.AlertDialog
 import android.content.Context
+import android.content.Intent
 import android.text.Editable
 import android.text.TextWatcher
 import android.view.View
 import android.view.animation.Animation
 import android.view.animation.RotateAnimation
+import android.widget.PopupMenu
 import android.widget.RadioGroup
 import android.widget.Toast
 import androidx.core.view.GravityCompat
@@ -45,8 +47,8 @@ class MainView(
      * 初始化View
      */
     fun init() {
-        // TODO: 从登录模块获取用户ID并设置
-        // viewModel.setUserId(userId)
+        // 刷新登录状态
+        viewModel.refreshLoginState()
         
         setupTopBar()
         setupDrawer()
@@ -61,8 +63,13 @@ class MainView(
     private fun setupTopBar() {
         // 登录按钮
         binding.btnLogin.setOnClickListener {
-            val intent = android.content.Intent(context, LoginActivity::class.java)
+            val intent = Intent(context, LoginActivity::class.java)
             context.startActivity(intent)
+        }
+
+        // 用户信息区域点击（显示退出登录菜单）
+        binding.layoutUserInfo.setOnClickListener { view ->
+            showUserMenu(view)
         }
 
         // 新建对话按钮
@@ -74,6 +81,39 @@ class MainView(
         binding.btnMenu.setOnClickListener {
             binding.drawerLayout.openDrawer(GravityCompat.START)
         }
+    }
+
+    /**
+     * 显示用户菜单（退出登录选项）
+     */
+    private fun showUserMenu(anchor: View) {
+        val popup = PopupMenu(context, anchor)
+        popup.menu.add(0, 1, 0, "退出登录")
+        popup.setOnMenuItemClickListener { item ->
+            when (item.itemId) {
+                1 -> {
+                    showLogoutConfirmDialog()
+                    true
+                }
+                else -> false
+            }
+        }
+        popup.show()
+    }
+
+    /**
+     * 显示退出登录确认对话框
+     */
+    private fun showLogoutConfirmDialog() {
+        AlertDialog.Builder(context)
+            .setTitle("退出登录")
+            .setMessage("确定要退出当前账号吗？")
+            .setPositiveButton("确定") { _, _ ->
+                viewModel.logout()
+                Toast.makeText(context, "已退出登录", Toast.LENGTH_SHORT).show()
+            }
+            .setNegativeButton("取消", null)
+            .show()
     }
 
     /**
@@ -160,15 +200,29 @@ class MainView(
         lifecycleOwner.lifecycleScope.launch {
             lifecycleOwner.repeatOnLifecycle(androidx.lifecycle.Lifecycle.State.STARTED) {
                 // 观察UI状态
-                viewModel.uiState.collect { state ->
-                    updateUI(state)
+                launch {
+                    viewModel.uiState.collect { state ->
+                        updateUI(state)
+                    }
                 }
 
                 // 观察导航事件
-                viewModel.navigateToConversation.collect { conversationId ->
-                    conversationId?.let {
-                        Toast.makeText(context, "打开对话: $it", Toast.LENGTH_SHORT).show()
-                        viewModel.clearNavigation()
+                launch {
+                    viewModel.navigateToConversation.collect { conversationId ->
+                        conversationId?.let {
+                            Toast.makeText(context, "打开对话: $it", Toast.LENGTH_SHORT).show()
+                            viewModel.clearNavigation()
+                        }
+                    }
+                }
+
+                // 观察需要登录事件
+                launch {
+                    viewModel.requireLogin.collect { requireLogin ->
+                        if (requireLogin) {
+                            showLoginRequiredDialog()
+                            viewModel.clearRequireLogin()
+                        }
                     }
                 }
             }
@@ -176,9 +230,27 @@ class MainView(
     }
 
     /**
+     * 显示需要登录的提示对话框
+     */
+    private fun showLoginRequiredDialog() {
+        AlertDialog.Builder(context)
+            .setTitle("提示")
+            .setMessage("请先登录")
+            .setPositiveButton("去登录") { _, _ ->
+                val intent = Intent(context, LoginActivity::class.java)
+                context.startActivity(intent)
+            }
+            .setNegativeButton("取消", null)
+            .show()
+    }
+
+    /**
      * 更新UI
      */
     private fun updateUI(state: MainUiState) {
+        // 更新登录状态显示
+        updateLoginUI(state)
+        
         // 更新对话列表（使用过滤后的列表）
         val filteredConversations = state.getFilteredConversations()
         historyAdapter.submitList(filteredConversations)
@@ -215,6 +287,28 @@ class MainView(
         state.error?.let {
             Toast.makeText(context, it, Toast.LENGTH_SHORT).show()
             viewModel.clearError()
+        }
+    }
+
+    /**
+     * 更新登录相关的UI
+     */
+    private fun updateLoginUI(state: MainUiState) {
+        if (state.isLoggedIn && state.userName != null) {
+            // 已登录：显示用户信息，隐藏登录按钮
+            binding.btnLogin.visibility = View.GONE
+            binding.layoutUserInfo.visibility = View.VISIBLE
+            binding.tvUsername.text = state.userName
+            
+            // 更新欢迎词
+            binding.tvWelcomeTitle.text = "嗨！${state.userName}"
+        } else {
+            // 未登录：显示登录按钮，隐藏用户信息
+            binding.btnLogin.visibility = View.VISIBLE
+            binding.layoutUserInfo.visibility = View.GONE
+            
+            // 恢复默认欢迎词
+            binding.tvWelcomeTitle.text = "嗨！这里是飞书知识问答"
         }
     }
 

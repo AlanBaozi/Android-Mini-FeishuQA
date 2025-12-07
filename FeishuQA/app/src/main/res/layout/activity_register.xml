@@ -46,50 +46,102 @@
         app:layout_constraintEnd_toEndOf="parent" />
 
     <!-- 账号标签 -->
-    <TextView
-        android:id="@+id/tv_account_label"
+    <LinearLayout
+        android:id="@+id/layout_account_label"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="* 账号"
-        android:textColor="#1F2329"
-        android:textSize="14sp"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
         android:layout_marginStart="32dp"
         android:layout_marginTop="32dp"
         app:layout_constraintTop_toBottomOf="@id/tv_title"
-        app:layout_constraintStart_toStartOf="parent" />
+        app:layout_constraintStart_toStartOf="parent">
+
+        <TextView
+            android:id="@+id/tv_account_required"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="*"
+            android:textColor="#FF4D4F"
+            android:textSize="14sp" />
+
+        <TextView
+            android:id="@+id/tv_account_label"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="2dp"
+            android:text="账号"
+            android:textColor="#1F2329"
+            android:textSize="14sp" />
+
+    </LinearLayout>
 
     <!-- 账号输入框 -->
-    <EditText
-        android:id="@+id/et_account"
+    <LinearLayout
+        android:id="@+id/layout_account"
         android:layout_width="0dp"
         android:layout_height="48dp"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:background="@drawable/bg_input_underline"
         android:layout_marginHorizontal="32dp"
         android:layout_marginTop="8dp"
-        android:background="@drawable/bg_input_underline"
-        android:hint="请输入账号"
-        android:textColor="#1F2329"
-        android:textColorHint="#8F959E"
-        android:textSize="16sp"
-        android:inputType="text"
-        android:importantForAutofill="no"
-        android:paddingStart="0dp"
-        android:paddingEnd="0dp"
-        app:layout_constraintTop_toBottomOf="@id/tv_account_label"
+        app:layout_constraintTop_toBottomOf="@id/layout_account_label"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent" />
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <ImageView
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:src="@drawable/ic_person"
+            android:contentDescription="账号" />
+
+        <EditText
+            android:id="@+id/et_account"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:layout_marginStart="12dp"
+            android:background="@android:color/transparent"
+            android:hint="请输入账号"
+            android:textColor="#1F2329"
+            android:textColorHint="#8F959E"
+            android:textSize="16sp"
+            android:inputType="text"
+            android:importantForAutofill="no" />
+
+    </LinearLayout>
 
     <!-- 密码标签 -->
-    <TextView
-        android:id="@+id/tv_password_label"
+    <LinearLayout
+        android:id="@+id/layout_password_label"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="* 密码"
-        android:textColor="#1F2329"
-        android:textSize="14sp"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
         android:layout_marginStart="32dp"
         android:layout_marginTop="16dp"
-        app:layout_constraintTop_toBottomOf="@id/et_account"
-        app:layout_constraintStart_toStartOf="parent" />
+        app:layout_constraintTop_toBottomOf="@id/layout_account"
+        app:layout_constraintStart_toStartOf="parent">
+
+        <TextView
+            android:id="@+id/tv_password_required"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="*"
+            android:textColor="#FF4D4F"
+            android:textSize="14sp" />
+
+        <TextView
+            android:id="@+id/tv_password_label"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="2dp"
+            android:text="密码"
+            android:textColor="#1F2329"
+            android:textSize="14sp" />
+
+    </LinearLayout>
 
     <!-- 密码输入框 -->
     <LinearLayout
@@ -101,15 +153,22 @@
         android:background="@drawable/bg_input_underline"
         android:layout_marginHorizontal="32dp"
         android:layout_marginTop="8dp"
-        app:layout_constraintTop_toBottomOf="@id/tv_password_label"
+        app:layout_constraintTop_toBottomOf="@id/layout_password_label"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent">
+
+        <ImageView
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:src="@drawable/ic_lock"
+            android:contentDescription="密码" />
 
         <EditText
             android:id="@+id/et_password"
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1"
+            android:layout_marginStart="12dp"
             android:background="@android:color/transparent"
             android:hint="请输入密码"
             android:textColor="#1F2329"
@@ -130,17 +189,35 @@
     </LinearLayout>
 
     <!-- 确认密码标签 -->
-    <TextView
-        android:id="@+id/tv_confirm_password_label"
+    <LinearLayout
+        android:id="@+id/layout_confirm_password_label"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="确认密码"
-        android:textColor="#1F2329"
-        android:textSize="14sp"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
         android:layout_marginStart="32dp"
         android:layout_marginTop="16dp"
         app:layout_constraintTop_toBottomOf="@id/layout_password"
-        app:layout_constraintStart_toStartOf="parent" />
+        app:layout_constraintStart_toStartOf="parent">
+
+        <TextView
+            android:id="@+id/tv_confirm_password_required"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="*"
+            android:textColor="#FF4D4F"
+            android:textSize="14sp" />
+
+        <TextView
+            android:id="@+id/tv_confirm_password_label"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="2dp"
+            android:text="确认密码"
+            android:textColor="#1F2329"
+            android:textSize="14sp" />
+
+    </LinearLayout>
 
     <!-- 确认密码输入框 -->
     <LinearLayout
@@ -152,15 +229,22 @@
         android:background="@drawable/bg_input_underline"
         android:layout_marginHorizontal="32dp"
         android:layout_marginTop="8dp"
-        app:layout_constraintTop_toBottomOf="@id/tv_confirm_password_label"
+        app:layout_constraintTop_toBottomOf="@id/layout_confirm_password_label"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent">
+
+        <ImageView
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:src="@drawable/ic_lock"
+            android:contentDescription="确认密码" />
 
         <EditText
             android:id="@+id/et_confirm_password"
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1"
+            android:layout_marginStart="12dp"
             android:background="@android:color/transparent"
             android:hint="请确认密码"
             android:textColor="#1F2329"
@@ -212,8 +296,3 @@
         app:layout_constraintEnd_toEndOf="parent" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>
-
-
-
-
-

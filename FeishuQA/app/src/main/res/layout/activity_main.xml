@@ -24,7 +24,7 @@
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintEnd_toEndOf="parent">
 
-            <!-- 登录按钮 -->
+            <!-- 登录按钮（未登录时显示） -->
             <TextView
                 android:id="@+id/btn_login"
                 android:layout_width="wrap_content"
@@ -39,6 +39,57 @@
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toTopOf="parent"
                 app:layout_constraintBottom_toBottomOf="parent" />
+
+            <!-- 用户信息区域（登录后显示） -->
+            <LinearLayout
+                android:id="@+id/layout_user_info"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:paddingHorizontal="12dp"
+                android:paddingVertical="6dp"
+                android:clickable="true"
+                android:focusable="true"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:visibility="gone"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintBottom_toBottomOf="parent">
+
+                <!-- 用户头像 -->
+                <ImageView
+                    android:id="@+id/iv_user_avatar"
+                    android:layout_width="32dp"
+                    android:layout_height="32dp"
+                    android:src="@drawable/ic_default_avatar"
+                    android:contentDescription="用户头像"
+                    android:scaleType="centerCrop" />
+
+                <!-- 用户名 -->
+                <TextView
+                    android:id="@+id/tv_username"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp"
+                    android:text="用户名"
+                    android:textColor="#1F2329"
+                    android:textSize="14sp"
+                    android:maxWidth="100dp"
+                    android:ellipsize="end"
+                    android:singleLine="true" />
+
+                <!-- 下拉箭头 -->
+                <ImageView
+                    android:id="@+id/iv_dropdown_arrow"
+                    android:layout_width="16dp"
+                    android:layout_height="16dp"
+                    android:layout_marginStart="4dp"
+                    android:src="@drawable/ic_arrow_down"
+                    android:contentDescription="展开"
+                    android:scaleType="centerInside" />
+
+            </LinearLayout>
 
             <!-- 菜单按钮（打开侧边栏） -->
             <ImageButton

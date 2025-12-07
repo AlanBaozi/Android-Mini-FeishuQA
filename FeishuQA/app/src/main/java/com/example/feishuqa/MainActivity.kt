@@ -1,14 +1,18 @@
 package com.example.feishuqa
 
+import android.content.Intent
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.GravityCompat
 import androidx.lifecycle.ViewModelProvider
+import com.example.feishuqa.app.login.LoginActivity
 import com.example.feishuqa.app.main.MainView
 import com.example.feishuqa.app.main.MainViewModel
 import com.example.feishuqa.app.main.MainViewModelFactory
+import com.example.feishuqa.common.utils.SessionManager
 import com.example.feishuqa.databinding.ActivityMainBinding
 
 /**
@@ -58,11 +62,19 @@ class MainActivity : AppCompatActivity() {
                 return false
             }
             override fun openImagePicker() = pickImageLauncher.launch("image/*")
-            override fun onPreviewImageClick(uri: Any) { /* 可选：点击预览图查看大图 */ }
 
             // 这里把事件委托给 MainViewModel 或 MainView 处理
             override fun onWebSearchClick() = viewModel.toggleWebSearch()
             override fun onModelSelectClick() = mainView.showModelSelectorDialog()
+            
+            // 检查是否已登录
+            override fun checkLoginBeforeSend(): Boolean {
+                if (!SessionManager.isLoggedIn(this@MainActivity)) {
+                    showLoginRequiredDialog()
+                    return false
+                }
+                return true
+            }
         })
 
         // 创建View并初始化
@@ -83,5 +95,28 @@ class MainActivity : AppCompatActivity() {
         } else {
             super.onBackPressed()
         }
+    }
+
+    /**
+     * 显示需要登录的提示对话框
+     */
+    private fun showLoginRequiredDialog() {
+        AlertDialog.Builder(this)
+            .setTitle("提示")
+            .setMessage("请先登录")
+            .setPositiveButton("去登录") { _, _ ->
+                val intent = Intent(this, LoginActivity::class.java)
+                startActivity(intent)
+            }
+            .setNegativeButton("取消", null)
+            .show()
+    }
+
+    /**
+     * 当Activity恢复时刷新登录状态
+     */
+    override fun onResume() {
+        super.onResume()
+        viewModel.refreshLoginState()
     }
 }

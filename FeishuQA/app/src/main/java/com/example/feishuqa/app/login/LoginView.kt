@@ -1,17 +1,21 @@
 package com.example.feishuqa.app.login
 
+import android.app.AlertDialog
 import android.content.Context
 import android.content.Intent
 import android.text.method.HideReturnsTransformationMethod
 import android.text.method.PasswordTransformationMethod
+import android.view.View
 import android.view.animation.Animation
 import android.view.animation.RotateAnimation
 import android.widget.Toast
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
+import com.example.feishuqa.MainActivity
 import com.example.feishuqa.R
 import com.example.feishuqa.app.register.RegisterActivity
+import com.example.feishuqa.common.utils.SessionManager
 import com.example.feishuqa.databinding.ActivityLoginBinding
 import kotlinx.coroutines.launch
 
@@ -66,6 +70,10 @@ class LoginView(
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
             override fun afterTextChanged(s: android.text.Editable?) {
                 viewModel.updateUsername(s?.toString() ?: "")
+                // 输入内容时清除错误状态
+                if (!s.isNullOrBlank()) {
+                    viewModel.clearUsernameError()
+                }
             }
         })
 
@@ -75,8 +83,19 @@ class LoginView(
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
             override fun afterTextChanged(s: android.text.Editable?) {
                 viewModel.updatePassword(s?.toString() ?: "")
+                // 输入内容时清除错误状态
+                if (!s.isNullOrBlank()) {
+                    viewModel.clearPasswordError()
+                }
             }
         })
+
+        // 密码输入框获得焦点时，检查用户名是否为空
+        binding.etPassword.setOnFocusChangeListener { _, hasFocus ->
+            if (hasFocus) {
+                viewModel.validateUsernameOnFocusChange()
+            }
+        }
     }
 
     /**
@@ -86,16 +105,27 @@ class LoginView(
         lifecycleOwner.lifecycleScope.launch {
             lifecycleOwner.repeatOnLifecycle(androidx.lifecycle.Lifecycle.State.STARTED) {
                 // 观察UI状态
-                viewModel.uiState.collect { state ->
-                    updateUI(state)
+                launch {
+                    viewModel.uiState.collect { state ->
+                        updateUI(state)
+                    }
                 }
 
                 // 观察登录成功事件
-                viewModel.loginSuccess.collect { user ->
-                    user?.let {
-                        Toast.makeText(context, "登录成功", Toast.LENGTH_SHORT).show()
-                        viewModel.clearLoginSuccess()
-                        (context as? android.app.Activity)?.finish()
+                launch {
+                    viewModel.loginSuccess.collect { user ->
+                        user?.let {
+                            // 保存登录状态
+                            SessionManager.saveLoginSession(context, it.userId, it.name)
+                            Toast.makeText(context, "登录成功", Toast.LENGTH_SHORT).show()
+                            viewModel.clearLoginSuccess()
+                            
+                            // 跳转到主界面
+                            val intent = Intent(context, MainActivity::class.java)
+                            intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK
+                            context.startActivity(intent)
+                            (context as? android.app.Activity)?.finish()
+                        }
                     }
                 }
             }
@@ -124,11 +154,51 @@ class LoginView(
             binding.btnLogin.text = "登录"
         }
 
-        // 显示错误
+        // 更新用户名输入框的高亮状态
+        if (state.usernameError) {
+            binding.layoutUsername.setBackgroundResource(R.drawable.bg_input_underline_error)
+        } else {
+            binding.layoutUsername.setBackgroundResource(R.drawable.bg_input_underline)
+        }
+
+        // 更新密码输入框的高亮状态
+        if (state.passwordError) {
+            binding.layoutPassword.setBackgroundResource(R.drawable.bg_input_underline_error)
+        } else {
+            binding.layoutPassword.setBackgroundResource(R.drawable.bg_input_underline)
+        }
+
+        // 显示弹窗错误
+        state.dialogError?.let {
+            showErrorDialog(it)
+            viewModel.clearDialogError()
+        }
+
+        // 显示Toast错误（保留兼容）
         state.error?.let {
             Toast.makeText(context, it, Toast.LENGTH_SHORT).show()
             viewModel.clearError()
         }
+    }
+
+    /**
+     * 显示错误弹窗
+     */
+    private fun showErrorDialog(message: String) {
+        AlertDialog.Builder(context)
+            .setTitle("提示")
+            .setMessage(message)
+            .setPositiveButton("确定", null)
+            .show()
+    }
+
+    /**
+     * 清空所有输入（从其他界面返回时调用）
+     */
+    fun clearInputs() {
+        binding.etUsername.setText("")
+        binding.etPassword.setText("")
+        viewModel.clearAllInputs()
     }
 
     /**
@@ -147,7 +217,3 @@ class LoginView(
         binding.ivLogo.startAnimation(rotateAnimation)
     }
 }
-
-
-
-

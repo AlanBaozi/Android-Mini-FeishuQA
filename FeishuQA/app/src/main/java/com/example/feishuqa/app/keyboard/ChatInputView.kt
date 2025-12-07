@@ -80,6 +80,12 @@ class ChatInputView @JvmOverloads constructor(
         // fun onPreviewImageClick(uri: Any) // 如果不需要外部跳转 Activity，这个接口方法可以去掉了
         fun onWebSearchClick()
         fun onModelSelectClick()
+        
+        /**
+         * 检查是否已登录（用于发送消息前的检查）
+         * @return true表示已登录可以继续，false表示未登录
+         */
+        fun checkLoginBeforeSend(): Boolean = true
     }
 
     init {
@@ -123,6 +129,14 @@ class ChatInputView @JvmOverloads constructor(
         viewModel.selectImage(uri)
     }
 
+    /**
+     * 清空输入框草稿内容（跳转界面时调用）
+     */
+    fun clearDraft() {
+        etInput.setText("")
+        viewModel.clearPendingImage()
+    }
+
     override fun onDetachedFromWindow() {
         super.onDetachedFromWindow()
         if (::baiduAsrManager.isInitialized) baiduAsrManager.destroy()
@@ -135,6 +149,11 @@ class ChatInputView @JvmOverloads constructor(
     private fun setupListeners() {
         // 发送逻辑
         btnSend.setOnClickListener {
+            // 检查是否已登录
+            if (actionListener?.checkLoginBeforeSend() == false) {
+                return@setOnClickListener
+            }
+            
             val text = etInput.text.toString().trim()
             if (text.isNotEmpty() || (layoutPreview?.visibility == View.VISIBLE)) {
                 viewModel.sendMessage(text)

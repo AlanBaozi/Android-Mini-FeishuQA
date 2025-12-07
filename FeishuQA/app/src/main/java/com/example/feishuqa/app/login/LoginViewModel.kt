@@ -56,17 +56,33 @@ class LoginViewModel(private val context: Context) : ViewModel()
      */
     fun login() {
         val currentState = _uiState.value
+        
+        // 收集所有未填写的字段
+        val missingFields = mutableListOf<String>()
+        var hasUsernameError = false
+        var hasPasswordError = false
+        
         if (currentState.username.isBlank()) {
-            _uiState.value = currentState.copy(error = "请输入用户名")
-            return
+            missingFields.add("用户名")
+            hasUsernameError = true
         }
         if (currentState.password.isBlank()) {
-            _uiState.value = currentState.copy(error = "请输入密码")
+            missingFields.add("密码")
+            hasPasswordError = true
+        }
+        
+        // 如果有未填写的字段，弹窗提示
+        if (missingFields.isNotEmpty()) {
+            _uiState.value = currentState.copy(
+                dialogError = "请输入${missingFields.joinToString("、")}",
+                usernameError = hasUsernameError,
+                passwordError = hasPasswordError
+            )
             return
         }
 
         viewModelScope.launch {
-            _uiState.value = currentState.copy(isLoading = true, error = null)
+            _uiState.value = currentState.copy(isLoading = true, error = null, dialogError = null)
             val result = model.login(currentState.username, currentState.password)
             Log.d("testLogin", "result = $result")
             result.onSuccess { user ->
@@ -75,10 +91,41 @@ class LoginViewModel(private val context: Context) : ViewModel()
             }.onFailure { exception ->
                 _uiState.value = currentState.copy(
                     isLoading = false,
-                    error = exception.message ?: "登录失败"
+                    dialogError = exception.message ?: "登录失败"
                 )
             }
         }
+    }
+
+    /**
+     * 检查用户名字段（当密码获得焦点时调用）
+     */
+    fun validateUsernameOnFocusChange() {
+        val currentState = _uiState.value
+        if (currentState.username.isBlank()) {
+            _uiState.value = currentState.copy(usernameError = true)
+        }
+    }
+
+    /**
+     * 清除用户名错误状态
+     */
+    fun clearUsernameError() {
+        _uiState.value = _uiState.value.copy(usernameError = false)
+    }
+
+    /**
+     * 清除密码错误状态
+     */
+    fun clearPasswordError() {
+        _uiState.value = _uiState.value.copy(passwordError = false)
+    }
+
+    /**
+     * 清除弹窗错误
+     */
+    fun clearDialogError() {
+        _uiState.value = _uiState.value.copy(dialogError = null)
     }
 
     /**
@@ -94,6 +141,13 @@ class LoginViewModel(private val context: Context) : ViewModel()
     fun clearError() {
         _uiState.value = _uiState.value.copy(error = null)
     }
+
+    /**
+     * 清空所有输入（返回界面时调用）
+     */
+    fun clearAllInputs() {
+        _uiState.value = LoginUiState()
+    }
 }
 
 /**
@@ -104,5 +158,8 @@ data class LoginUiState(
     val password: String = "",
     val isPasswordVisible: Boolean = false,
     val isLoading: Boolean = false,
-    val error: String? = null
+    val error: String? = null,
+    val dialogError: String? = null, // 用于弹窗显示的错误
+    val usernameError: Boolean = false, // 用户名字段是否有错误（高亮）
+    val passwordError: Boolean = false // 密码字段是否有错误（高亮）
 )

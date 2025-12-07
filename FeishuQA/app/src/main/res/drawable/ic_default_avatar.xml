@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- 圆形背景 -->
+    <item>
+        <shape android:shape="oval">
+            <solid android:color="#E8E9EB" />
+        </shape>
+    </item>
+    <!-- 人物图标 -->
+    <item
+        android:drawable="@drawable/ic_person"
+        android:top="6dp"
+        android:bottom="6dp"
+        android:left="6dp"
+        android:right="6dp" />
+</layer-list>
+
+

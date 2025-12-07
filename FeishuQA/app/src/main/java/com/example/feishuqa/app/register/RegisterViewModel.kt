@@ -67,25 +67,48 @@ class RegisterViewModel(private val context: Context) : ViewModel() {
      */
     fun register() {
         val currentState = _uiState.value
+        
+        // 收集所有未填写的字段
+        val missingFields = mutableListOf<String>()
+        var hasAccountError = false
+        var hasPasswordError = false
+        var hasConfirmPasswordError = false
+        
         if (currentState.account.isBlank()) {
-            _uiState.value = currentState.copy(error = "请输入账号")
-            return
+            missingFields.add("账号")
+            hasAccountError = true
         }
         if (currentState.password.isBlank()) {
-            _uiState.value = currentState.copy(error = "请输入密码")
-            return
+            missingFields.add("密码")
+            hasPasswordError = true
         }
         if (currentState.confirmPassword.isBlank()) {
-            _uiState.value = currentState.copy(error = "请确认密码")
+            missingFields.add("确认密码")
+            hasConfirmPasswordError = true
+        }
+        
+        // 如果有未填写的字段，弹窗提示
+        if (missingFields.isNotEmpty()) {
+            _uiState.value = currentState.copy(
+                dialogError = "请输入${missingFields.joinToString("、")}",
+                accountError = hasAccountError,
+                passwordError = hasPasswordError,
+                confirmPasswordError = hasConfirmPasswordError
+            )
             return
         }
+        
+        // 检查两次密码是否一致
         if (currentState.password != currentState.confirmPassword) {
-            _uiState.value = currentState.copy(error = "两次密码输入不一致")
+            _uiState.value = currentState.copy(
+                dialogError = "两次密码输入不一致",
+                confirmPasswordError = true
+            )
             return
         }
 
         viewModelScope.launch {
-            _uiState.value = currentState.copy(isLoading = true, error = null)
+            _uiState.value = currentState.copy(isLoading = true, error = null, dialogError = null)
             val result = model.register(currentState.account, currentState.password)
             Log.d("testRegister", "result = $result")
             result.onSuccess { user ->
@@ -94,10 +117,69 @@ class RegisterViewModel(private val context: Context) : ViewModel() {
             }.onFailure { exception ->
                 _uiState.value = currentState.copy(
                     isLoading = false,
-                    error = exception.message ?: "注册失败"
+                    dialogError = exception.message ?: "注册失败"
                 )
             }
         }
+    }
+
+    /**
+     * 检查账号字段（当密码获得焦点时调用）
+     */
+    fun validateAccountOnFocusChange() {
+        val currentState = _uiState.value
+        if (currentState.account.isBlank()) {
+            _uiState.value = currentState.copy(accountError = true)
+        }
+    }
+
+    /**
+     * 检查密码字段（当确认密码获得焦点时调用）
+     */
+    fun validatePasswordOnFocusChange() {
+        val currentState = _uiState.value
+        var hasAccountError = false
+        var hasPasswordError = false
+        
+        if (currentState.account.isBlank()) {
+            hasAccountError = true
+        }
+        if (currentState.password.isBlank()) {
+            hasPasswordError = true
+        }
+        
+        _uiState.value = currentState.copy(
+            accountError = hasAccountError,
+            passwordError = hasPasswordError
+        )
+    }
+
+    /**
+     * 清除账号错误状态
+     */
+    fun clearAccountError() {
+        _uiState.value = _uiState.value.copy(accountError = false)
+    }
+
+    /**
+     * 清除密码错误状态
+     */
+    fun clearPasswordError() {
+        _uiState.value = _uiState.value.copy(passwordError = false)
+    }
+
+    /**
+     * 清除确认密码错误状态
+     */
+    fun clearConfirmPasswordError() {
+        _uiState.value = _uiState.value.copy(confirmPasswordError = false)
+    }
+
+    /**
+     * 清除弹窗错误
+     */
+    fun clearDialogError() {
+        _uiState.value = _uiState.value.copy(dialogError = null)
     }
 
     /**
@@ -113,6 +195,13 @@ class RegisterViewModel(private val context: Context) : ViewModel() {
     fun clearError() {
         _uiState.value = _uiState.value.copy(error = null)
     }
+
+    /**
+     * 清空所有输入（返回界面时调用）
+     */
+    fun clearAllInputs() {
+        _uiState.value = RegisterUiState()
+    }
 }
 
 /**
@@ -125,7 +214,11 @@ data class RegisterUiState(
     val isPasswordVisible: Boolean = false,
     val isConfirmPasswordVisible: Boolean = false,
     val isLoading: Boolean = false,
-    val error: String? = null
+    val error: String? = null,
+    val dialogError: String? = null, // 用于弹窗显示的错误
+    val accountError: Boolean = false, // 账号字段是否有错误（高亮）
+    val passwordError: Boolean = false, // 密码字段是否有错误（高亮）
+    val confirmPasswordError: Boolean = false // 确认密码字段是否有错误（高亮）
 )
 
 

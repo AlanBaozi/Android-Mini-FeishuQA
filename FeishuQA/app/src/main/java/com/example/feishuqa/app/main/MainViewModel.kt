@@ -3,6 +3,7 @@ package com.example.feishuqa.app.main
 import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.feishuqa.common.utils.SessionManager
 import com.example.feishuqa.data.entity.AIModel
 import com.example.feishuqa.data.entity.AIModels
 import com.example.feishuqa.data.entity.Conversation
@@ -28,8 +29,64 @@ class MainViewModel(private val context: Context) : ViewModel() {
     private val _navigateToConversation = MutableStateFlow<String?>(null)
     val navigateToConversation: StateFlow<String?> = _navigateToConversation.asStateFlow()
 
+    // 需要登录提示事件
+    private val _requireLogin = MutableStateFlow(false)
+    val requireLogin: StateFlow<Boolean> = _requireLogin.asStateFlow()
+
     init {
+        refreshLoginState()
         loadConversations()
+    }
+
+    /**
+     * 刷新登录状态
+     */
+    fun refreshLoginState() {
+        val isLoggedIn = SessionManager.isLoggedIn(context)
+        val userName = SessionManager.getUserName(context)
+        val userId = SessionManager.getUserId(context)
+        
+        _uiState.value = _uiState.value.copy(
+            isLoggedIn = isLoggedIn,
+            userName = userName,
+            userId = userId
+        )
+        
+        // 如果已登录，设置用户ID给repository
+        if (isLoggedIn && userId != null) {
+            repository.setUserId(userId)
+        }
+    }
+
+    /**
+     * 退出登录
+     */
+    fun logout() {
+        SessionManager.clearSession(context)
+        _uiState.value = _uiState.value.copy(
+            isLoggedIn = false,
+            userName = null,
+            userId = null
+        )
+    }
+
+    /**
+     * 检查是否需要登录（用于创建新对话等操作）
+     * @return true表示已登录，false表示未登录
+     */
+    fun checkLoginRequired(): Boolean {
+        if (!SessionManager.isLoggedIn(context)) {
+            _requireLogin.value = true
+            return false
+        }
+        return true
+    }
+
+    /**
+     * 清除登录提示事件
+     */
+    fun clearRequireLogin() {
+        _requireLogin.value = false
     }
 
     /**
@@ -98,6 +155,11 @@ class MainViewModel(private val context: Context) : ViewModel() {
      * 创建新对话
      */
     fun createNewConversation(title: String) {
+        // 检查是否已登录
+        if (!checkLoginRequired()) {
+            return
+        }
+        
         viewModelScope.launch {
             val result = repository.createConversation(title)
             result.onSuccess { conversationId ->
@@ -202,7 +264,10 @@ data class MainUiState(
     val isWebSearchEnabled: Boolean = false,
     val isTextInputMode: Boolean = true,
     val selectedConversationId: String? = null,
-    val searchQuery: String = "" // 搜索关键词
+    val searchQuery: String = "", // 搜索关键词
+    val isLoggedIn: Boolean = false, // 是否已登录
+    val userName: String? = null, // 当前登录用户名
+    val userId: String? = null // 当前登录用户ID
 ) {
     /**
      * 获取过滤后的对话列表（根据搜索关键词和置顶状态排序）
