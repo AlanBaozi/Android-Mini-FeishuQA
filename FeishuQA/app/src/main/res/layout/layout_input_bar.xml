@@ -44,7 +44,7 @@
                 android:layout_marginStart="4dp"
                 android:text="联网搜索"
                 android:textColor="#646A73"
-                android:textSize="12sp" />
+                android:textSize="14sp" />
         </LinearLayout>
 
         <Space
@@ -70,7 +70,7 @@
                 android:layout_height="wrap_content"
                 android:text="DeepSeek R1"
                 android:textColor="#646A73"
-                android:textSize="12sp" />
+                android:textSize="14sp" />
 
             <ImageView
                 android:layout_width="14dp"
@@ -159,20 +159,18 @@
                 </FrameLayout>
             </FrameLayout>
 
-            <!-- 区域 B: 操作行 (附件 + 语音 + 输入框 + 发送) -->
-            <!-- orientation="horizontal" 让它们排成一行 -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
-                android:gravity="bottom"> <!-- 底部对齐，防止输入框变高时图标乱跑 -->
+                android:gravity="center_vertical">
 
                 <!-- 1. 附件按钮 -->
+                <!-- 修改点：去掉了 marginBottom -->
                 <ImageButton
                     android:id="@+id/btn_attach"
                     android:layout_width="32dp"
                     android:layout_height="32dp"
-                    android:layout_marginBottom="4dp"
                     android:src="@drawable/ic_attach"
                     android:background="?attr/selectableItemBackgroundBorderless"
                     android:scaleType="centerInside"
@@ -181,11 +179,11 @@
                 <Space android:layout_width="4dp" android:layout_height="wrap_content"/>
 
                 <!-- 2. 语音切换按钮 -->
+                <!-- 修改点：去掉了 marginBottom -->
                 <ImageButton
                     android:id="@+id/btn_toggle_input_mode"
                     android:layout_width="32dp"
                     android:layout_height="32dp"
-                    android:layout_marginBottom="4dp"
                     android:src="@drawable/ic_mic"
                     android:background="?attr/selectableItemBackgroundBorderless"
                     android:scaleType="centerInside"
@@ -193,7 +191,7 @@
 
                 <Space android:layout_width="8dp" android:layout_height="wrap_content"/>
 
-                <!-- 3. 输入框 / 语音按钮 (权重设为1，占满中间) -->
+                <!-- 3. 输入框 / 语音按钮 -->
                 <FrameLayout
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
@@ -206,19 +204,22 @@
                         android:minHeight="40dp"
                         android:maxLines="5"
                         android:background="@null"
-                        android:paddingVertical="10dp"
-                        android:hint="问点什么..."
+
+                        android:textSize="16sp"
+                        android:inputType="textMultiLine"
                         android:textColor="#1F2329"
                         android:textColorHint="#9CA3AF"
-                        android:textSize="16sp"
-                        android:inputType="textMultiLine" />
-
+                        android:hint="问点什么..."
+                        android:includeFontPadding="false"
+                        android:paddingVertical="8dp"
+                        android:gravity="center_vertical" />
                     <TextView
                         android:id="@+id/btn_voice_input"
                         android:layout_width="match_parent"
                         android:layout_height="40dp"
                         android:gravity="center"
                         android:text="按住 说话"
+                        android:textSize="16sp"
                         android:textColor="#1F2329"
                         android:background="@drawable/bg_voice_button"
                         android:visibility="gone" />
@@ -226,19 +227,18 @@
 
                 <Space android:layout_width="8dp" android:layout_height="wrap_content"/>
 
-                <!-- 4. 发送按钮 (现在也在大盒子里了) -->
+                <!-- 4. 发送按钮 -->
+                <!-- 修改 2：去掉了 marginBottom -->
                 <ImageButton
                     android:id="@+id/btn_send"
                     android:layout_width="32dp"
                     android:layout_height="32dp"
-                    android:layout_marginBottom="4dp"
                     android:src="@drawable/ic_send"
                     android:background="@drawable/bg_send_button"
                     android:padding="8dp"
                     android:scaleType="centerInside"
                     android:visibility="gone"
                     app:tint="#FFFFFF" />
-                <!-- 注意：如果你的 bg_send_button 是深色的，这里 tint 设为白色；如果是浅色，设为深色 -->
 
             </LinearLayout>
 

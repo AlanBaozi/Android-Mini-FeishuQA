@@ -13,6 +13,7 @@ import android.util.AttributeSet
 import android.view.LayoutInflater
 import android.view.MotionEvent
 import android.view.View
+import android.view.ViewGroup
 import android.view.inputmethod.InputMethodManager
 import android.widget.*
 import androidx.lifecycle.LifecycleOwner
@@ -45,9 +46,7 @@ class ChatInputView @JvmOverloads constructor(
     // 图片预览 UI
     private var layoutPreview: View? = null
     private var ivPreview: ImageView? = null
-    // 【修改】这里改为 View，因为 XML 里它是一个 FrameLayout
     private var btnDeletePreview: View? = null
-    // 【修改】对应 XML 里的 layoutPreviewLoading
     private var viewPreviewMask: View? = null
     private var pbPreviewLoading: ProgressBar? = null
 
@@ -72,10 +71,13 @@ class ChatInputView @JvmOverloads constructor(
     private var tvHintState: TextView? = null
     private var bubbleContainer: View? = null
 
+    // ★★★ 新增：图片全屏预览 Dialog
+    private var imagePreviewDialog: Dialog? = null
+
     interface ActionListener {
         fun requestRecordAudioPermission(): Boolean
         fun openImagePicker()
-        fun onPreviewImageClick(uri: Any)
+        // fun onPreviewImageClick(uri: Any) // 如果不需要外部跳转 Activity，这个接口方法可以去掉了
         fun onWebSearchClick()
         fun onModelSelectClick()
     }
@@ -95,16 +97,11 @@ class ChatInputView @JvmOverloads constructor(
         btnModelSelect = view.findViewById(R.id.btn_model_select)
         tvSelectedModel = view.findViewById(R.id.tv_selected_model)
 
-        // 2. 绑定预览控件 (适配新布局 ID)
+        // 2. 绑定预览控件
         layoutPreview = view.findViewById(R.id.layoutPreview)
         ivPreview = view.findViewById(R.id.ivPreview)
-
-        // 【修改】绑定新的删除按钮 ID
         btnDeletePreview = view.findViewById(R.id.btnDeletePreview)
-
-        // 【修改】绑定新的遮罩层 ID (layoutPreviewLoading)
         viewPreviewMask = view.findViewById(R.id.layoutPreviewLoading)
-
         pbPreviewLoading = view.findViewById(R.id.pbPreviewLoading)
 
         setupListeners()
@@ -131,6 +128,8 @@ class ChatInputView @JvmOverloads constructor(
         if (::baiduAsrManager.isInitialized) baiduAsrManager.destroy()
         handler.removeCallbacksAndMessages(null)
         dismissVoiceDialog()
+        // ★★★ 销毁图片预览弹窗
+        dismissImagePreviewDialog()
     }
 
     private fun setupListeners() {
@@ -149,11 +148,14 @@ class ChatInputView @JvmOverloads constructor(
 
         // 图片逻辑
         btnAttach.setOnClickListener { actionListener?.openImagePicker() }
-
-        // 【修改】使用新的 btnDeletePreview 监听点击
         btnDeletePreview?.setOnClickListener { viewModel.clearPendingImage() }
 
-        ivPreview?.setOnClickListener { viewModel.pendingImageUri.value?.let { actionListener?.onPreviewImageClick(it) } }
+        // ★★★ 修改：点击小图直接在当前 View 弹出全屏预览
+        ivPreview?.setOnClickListener {
+            viewModel.pendingImageUri.value?.let { uri ->
+                showImagePreviewDialog(uri)
+            }
+        }
 
         // 输入监听
         etInput.addTextChangedListener(object : TextWatcher {
@@ -172,6 +174,45 @@ class ChatInputView @JvmOverloads constructor(
         setupVoiceTouchListener()
     }
 
+    // ★★★ 新增：显示全屏图片预览
+    private fun showImagePreviewDialog(uri: Any) {
+        if (imagePreviewDialog == null) {
+            // 使用全屏无标题样式，背景纯黑
+            imagePreviewDialog = Dialog(context, android.R.style.Theme_Black_NoTitleBar_Fullscreen).apply {
+                setContentView(R.layout.dialog_image_preview)
+                window?.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
+            }
+        }
+
+        val ivFull = imagePreviewDialog?.findViewById<ImageView>(R.id.ivFullImage)
+
+        if (ivFull != null) {
+            // 加载原图
+            Glide.with(context)
+                .load(uri)
+                .fitCenter() // 保证图片完整显示
+                .into(ivFull)
+
+            // 点击大图关闭预览
+            ivFull.setOnClickListener {
+                imagePreviewDialog?.dismiss()
+            }
+        }
+
+        // 安全显示
+        if ((context as? android.app.Activity)?.isFinishing == false) {
+            imagePreviewDialog?.show()
+        }
+    }
+
+    // ★★★ 新增：安全关闭图片预览
+    private fun dismissImagePreviewDialog() {
+        if (imagePreviewDialog?.isShowing == true && (context as? android.app.Activity)?.isFinishing == false) {
+            try { imagePreviewDialog?.dismiss() } catch (_: Exception) {}
+        }
+        imagePreviewDialog = null
+    }
+
     private fun updateSendButtonState() {
         val hasText = etInput.text.toString().trim().isNotEmpty()
         val hasImage = layoutPreview?.visibility == View.VISIBLE
@@ -183,7 +224,7 @@ class ChatInputView @JvmOverloads constructor(
         if (isVoiceMode) {
             etInput.visibility = View.GONE
             btnVoiceInput.visibility = View.VISIBLE
-            btnToggleInput.setImageResource(R.drawable.ic_keyboard) // 假设你有这个图标
+            btnToggleInput.setImageResource(R.drawable.ic_keyboard) // 请确保有这个资源
             hideKeyboard()
             btnSend.visibility = View.GONE
         } else {
@@ -206,7 +247,7 @@ class ChatInputView @JvmOverloads constructor(
         imm?.showSoftInput(etInput, InputMethodManager.SHOW_IMPLICIT)
     }
 
-    // 处理图片预览
+    // 处理图片预览 (小图)
     private fun handleImagePreview(uri: Any?) {
         val previewLayout = layoutPreview ?: return
         val imageView = ivPreview ?: return
@@ -214,7 +255,6 @@ class ChatInputView @JvmOverloads constructor(
         val pb = pbPreviewLoading
 
         if (uri != null) {
-            // 核心逻辑：有图片 URI 时，强制显示容器
             previewLayout.visibility = View.VISIBLE
             mask?.visibility = View.VISIBLE
             pb?.visibility = View.VISIBLE
@@ -236,7 +276,6 @@ class ChatInputView @JvmOverloads constructor(
                     }
                 }).into(imageView)
         } else {
-            // 核心逻辑：没有图片 URI 时，隐藏容器
             previewLayout.visibility = View.GONE
             updateSendButtonState()
         }
@@ -276,7 +315,7 @@ class ChatInputView @JvmOverloads constructor(
         }
     }
 
-    // ASR 逻辑保持不变
+    // ASR 逻辑
     private fun initBaiduAsr(appContext: Context) {
         baiduAsrManager = BaiduAsrManager(appContext, object : BaiduAsrManager.AsrListener {
             override fun onReady() = updateDisplayText()
