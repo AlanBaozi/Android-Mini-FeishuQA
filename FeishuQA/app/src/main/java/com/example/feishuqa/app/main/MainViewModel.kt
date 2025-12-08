@@ -3,10 +3,12 @@ package com.example.feishuqa.app.main
 import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.feishuqa.common.utils.AiHelper
 import com.example.feishuqa.common.utils.SessionManager
 import com.example.feishuqa.data.entity.AIModel
 import com.example.feishuqa.data.entity.AIModels
 import com.example.feishuqa.data.entity.Conversation
+import com.example.feishuqa.data.repository.ChatRepositoryExample
 import com.example.feishuqa.data.repository.MainRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -120,8 +122,11 @@ class MainViewModel(private val context: Context) : ViewModel() {
             _uiState.value = _uiState.value.copy(isLoading = true)
             try {
                 val conversations = repository.getConversations()
+                // 计算知识点数量（基于加载到的对话列表）
+                val knowledgePoints = calculateKnowledgePointsFromList(conversations)
                 _uiState.value = _uiState.value.copy(
                     conversations = conversations,
+                    knowledgePointCount = knowledgePoints,
                     isLoading = false
                 )
             } catch (e: Exception) {
@@ -151,9 +156,12 @@ class MainViewModel(private val context: Context) : ViewModel() {
 
     /**
      * 选择AI模型
+     * 同时更新 ChatRepositoryExample 中的当前模型
      */
     fun selectModel(model: AIModel) {
         _uiState.value = _uiState.value.copy(selectedModel = model)
+        // 同步更新 ChatRepositoryExample 中的模型
+        ChatRepositoryExample.getInstance(context).setCurrentModel(model)
     }
 
     /**
@@ -282,7 +290,165 @@ class MainViewModel(private val context: Context) : ViewModel() {
             }
         }
     }
+
+    /**
+     * 计算知识点数量（基于用户的历史对话和消息数）
+     * 规则：每条对话算 100 个基础知识点，每条消息额外算 50 个
+     */
+    private fun calculateKnowledgePoints(): Int {
+        return calculateKnowledgePointsFromList(_uiState.value.conversations)
+    }
+
+    /**
+     * 从对话列表计算知识点数量
+     * 规则：每条对话算 100 个基础知识点，每条消息额外算 50 个
+     */
+    private fun calculateKnowledgePointsFromList(conversations: List<Conversation>): Int {
+        var total = 0
+        conversations.forEach { conv ->
+            total += 100 // 基础知识点
+            total += conv.messageCount * 50 // 每条消息额外知识点
+        }
+        return total
+    }
+
+    /**
+     * 加载推荐话题
+     * 根据用户最近10条历史对话标题，调用大模型生成4个推荐问题
+     */
+    fun loadRecommendations() {
+        // 未登录不加载推荐
+        if (!_uiState.value.isLoggedIn) {
+            _uiState.value = _uiState.value.copy(
+                recommendedTopics = emptyList(),
+                knowledgePointCount = 0
+            )
+            return
+        }
+
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isLoadingRecommendations = true)
+
+            try {
+                // 获取最近10条对话标题
+                val conversations = _uiState.value.conversations
+                    .sortedByDescending { it.lastMessageTime }
+                    .take(10)
+                    .map { it.title }
+
+                // 计算知识点数量
+                val knowledgePoints = calculateKnowledgePoints()
+                
+                if (conversations.isEmpty()) {
+                    // 没有历史记录，使用默认推荐
+                    _uiState.value = _uiState.value.copy(
+                        recommendedTopics = getDefaultRecommendations(),
+                        knowledgePointCount = knowledgePoints,
+                        isLoadingRecommendations = false
+                    )
+                    return@launch
+                }
+
+                // 构建 prompt
+                val historyTitles = conversations.joinToString("\n") { "- $it" }
+                val prompt = """基于用户最近的搜索历史，总结出2个相关主题，并为每个主题生成2个推荐问题（共4个问题）。
+
+用户最近的搜索历史：
+$historyTitles
+
+请严格按以下 JSON 格式返回（不要有其他文字）：
+[
+  {"theme": "主题1", "content": "推荐问题1"},
+  {"theme": "主题1", "content": "推荐问题2"},
+  {"theme": "主题2", "content": "推荐问题3"},
+  {"theme": "主题2", "content": "推荐问题4"}
+]
+
+要求：
+1. 问题应该简洁，不超过20个字
+2. 问题应该与用户历史搜索内容相关但有拓展
+3. 只返回JSON数组，不要有其他说明文字"""
+
+                // 调用当前选中的模型 API
+                val result = AiHelper.chatWithModel(_uiState.value.selectedModel, prompt)
+                
+                val topics = if (result.isSuccess) {
+                    parseRecommendations(result.getOrNull() ?: "")
+                } else {
+                    getDefaultRecommendations()
+                }
+
+                _uiState.value = _uiState.value.copy(
+                    recommendedTopics = topics,
+                    knowledgePointCount = knowledgePoints,
+                    isLoadingRecommendations = false
+                )
+            } catch (e: Exception) {
+                e.printStackTrace()
+                _uiState.value = _uiState.value.copy(
+                    recommendedTopics = getDefaultRecommendations(),
+                    knowledgePointCount = calculateKnowledgePoints(),
+                    isLoadingRecommendations = false
+                )
+            }
+        }
+    }
+
+    /**
+     * 解析推荐话题 JSON
+     */
+    private fun parseRecommendations(json: String): List<RecommendedTopic> {
+        return try {
+            // 提取 JSON 数组部分
+            val jsonArray = json.trim().let {
+                val start = it.indexOf('[')
+                val end = it.lastIndexOf(']')
+                if (start >= 0 && end > start) it.substring(start, end + 1) else it
+            }
+
+            val gson = com.google.gson.Gson()
+            val type = object : com.google.gson.reflect.TypeToken<List<Map<String, String>>>() {}.type
+            val list: List<Map<String, String>> = gson.fromJson(jsonArray, type)
+
+            list.take(4).map { item ->
+                RecommendedTopic(
+                    content = item["content"] ?: "推荐问题",
+                    theme = item["theme"] ?: ""
+                )
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            getDefaultRecommendations()
+        }
+    }
+
+    /**
+     * 获取默认推荐话题
+     */
+    private fun getDefaultRecommendations(): List<RecommendedTopic> {
+        return listOf(
+            RecommendedTopic("如何提高工作效率？", "效率提升"),
+            RecommendedTopic("有哪些实用的学习方法？", "学习技巧"),
+            RecommendedTopic("怎样保持健康的生活方式？", "健康生活"),
+            RecommendedTopic("如何进行有效的时间管理？", "时间管理")
+        )
+    }
+
+    /**
+     * 点击推荐话题，直接发送到输入框
+     */
+    fun onRecommendationClick(topic: RecommendedTopic): String {
+        return topic.content
+    }
 }
+
+/**
+ * 推荐话题数据类
+ */
+data class RecommendedTopic(
+    val content: String,
+    val theme: String = ""
+)
 
 /**
  * 主界面UI状态
@@ -298,7 +464,10 @@ data class MainUiState(
     val searchQuery: String = "", // 搜索关键词
     val isLoggedIn: Boolean = false, // 是否已登录
     val userName: String? = null, // 当前登录用户名
-    val userId: String? = null // 当前登录用户ID
+    val userId: String? = null, // 当前登录用户ID
+    val knowledgePointCount: Int = 0, // 知识点数量（基于历史对话）
+    val recommendedTopics: List<RecommendedTopic> = emptyList(), // 推荐话题列表
+    val isLoadingRecommendations: Boolean = false // 是否正在加载推荐
 ) {
     /**
      * 获取过滤后的对话列表（根据搜索关键词和置顶状态排序）

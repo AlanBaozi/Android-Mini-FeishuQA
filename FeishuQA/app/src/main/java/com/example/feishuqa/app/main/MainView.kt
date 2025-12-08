@@ -53,9 +53,19 @@ class MainView(
         
         setupTopBar()
         setupDrawer()
+        setupRecommendations()
         //setupInputBar() 已经被chatinputview内部接管
         observeViewModel()
         startLogoAnimation()
+    }
+
+    /**
+     * 设置推荐话题的点击事件
+     */
+    private fun setupRecommendations() {
+        // 初始时隐藏推荐区域
+        binding.gridRecommendations.visibility = View.GONE
+        binding.tvWelcomeSubtitle.visibility = View.GONE
     }
 
     /**
@@ -194,6 +204,9 @@ class MainView(
 
 
 
+    // 记录上次的登录状态，用于检测登录状态变化
+    private var lastLoggedInState: Boolean? = null
+
     /**
      * 观察ViewModel状态变化
      */
@@ -204,6 +217,14 @@ class MainView(
                 launch {
                     viewModel.uiState.collect { state ->
                         updateUI(state)
+                        
+                        // 检测登录状态变化，当用户登录后加载推荐
+                        if (lastLoggedInState != state.isLoggedIn) {
+                            lastLoggedInState = state.isLoggedIn
+                            if (state.isLoggedIn && state.recommendedTopics.isEmpty() && !state.isLoadingRecommendations) {
+                                viewModel.loadRecommendations()
+                            }
+                        }
                     }
                 }
 
@@ -302,8 +323,18 @@ class MainView(
             binding.layoutUserInfo.visibility = View.VISIBLE
             binding.tvUsername.text = state.userName
             
-            // 更新欢迎词
+            // 更新欢迎词为"嗨！用户名"
             binding.tvWelcomeTitle.text = "嗨！${state.userName}"
+            
+            // 显示推荐话题区域
+            binding.gridRecommendations.visibility = View.VISIBLE
+            
+            // 显示知识点数（始终显示，即使为0也显示）
+            binding.tvWelcomeSubtitle.visibility = View.VISIBLE
+            binding.tvWelcomeSubtitle.text = "整合你可访问的 ${formatNumber(state.knowledgePointCount)} 个知识点，AI 搜索生成回答"
+            
+            // 更新推荐话题内容
+            updateRecommendations(state.recommendedTopics)
         } else {
             // 未登录：显示登录按钮，隐藏用户信息
             binding.btnLogin.visibility = View.VISIBLE
@@ -311,7 +342,64 @@ class MainView(
             
             // 恢复默认欢迎词
             binding.tvWelcomeTitle.text = "嗨！这里是飞书知识问答"
+            
+            // 隐藏推荐话题区域和知识点数
+            binding.gridRecommendations.visibility = View.GONE
+            binding.tvWelcomeSubtitle.visibility = View.GONE
         }
+    }
+
+    /**
+     * 更新推荐话题内容
+     */
+    private fun updateRecommendations(topics: List<RecommendedTopic>) {
+        if (topics.isEmpty()) return
+
+        val textViews = listOf(
+            binding.tvRecommend1,
+            binding.tvRecommend2,
+            binding.tvRecommend3,
+            binding.tvRecommend4
+        )
+
+        val cards = listOf(
+            binding.cardRecommend1,
+            binding.cardRecommend2,
+            binding.cardRecommend3,
+            binding.cardRecommend4
+        )
+
+        topics.forEachIndexed { index, topic ->
+            if (index < textViews.size) {
+                textViews[index].text = topic.content
+                cards[index].setOnClickListener {
+                    // 点击推荐话题，将内容填入输入框并发送
+                    onRecommendationClick(topic.content)
+                }
+            }
+        }
+    }
+
+    /**
+     * 点击推荐话题的处理
+     */
+    private fun onRecommendationClick(content: String) {
+        // 将推荐内容设置到输入框
+        val etInput = chatInputView.findViewById<android.widget.EditText>(R.id.et_input)
+        etInput?.setText(content)
+        etInput?.setSelection(content.length)
+        
+        // 获取焦点并弹出键盘
+        etInput?.requestFocus()
+        val imm = context.getSystemService(android.content.Context.INPUT_METHOD_SERVICE) as? android.view.inputmethod.InputMethodManager
+        imm?.showSoftInput(etInput, android.view.inputmethod.InputMethodManager.SHOW_IMPLICIT)
+    }
+
+    /**
+     * 格式化数字（添加千位分隔符）
+     */
+    private fun formatNumber(number: Int): String {
+        return java.text.NumberFormat.getNumberInstance(java.util.Locale.US).format(number)
     }
 
     /**

@@ -63,6 +63,8 @@ dependencies {
     implementation(libs.androidx.drawerlayout)
     implementation(libs.androidx.appcompat)
     implementation(libs.material)
+    // GridLayout
+    implementation("androidx.gridlayout:gridlayout:1.0.0")
     // Compose ConstraintLayout
     implementation(libs.androidx.constraintlayout.compose)
     // Activity KTX

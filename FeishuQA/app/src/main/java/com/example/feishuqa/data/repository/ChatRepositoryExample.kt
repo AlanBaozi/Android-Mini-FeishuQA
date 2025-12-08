@@ -5,9 +5,12 @@ import android.net.Uri
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import com.example.feishuqa.app.history.HistoryModel
+import com.example.feishuqa.common.utils.AiHelper
 import com.example.feishuqa.common.utils.ImageUtils
 import com.example.feishuqa.common.utils.JsonUtils
 import com.example.feishuqa.common.utils.SessionManager
+import com.example.feishuqa.data.entity.AIModel
+import com.example.feishuqa.data.entity.AIModels
 import com.example.feishuqa.data.entity.Message
 import com.example.feishuqa.data.entity.MessageType
 import com.example.feishuqa.data.entity.MessageStatus
@@ -44,6 +47,9 @@ class ChatRepositoryExample private constructor(private val context: Context) {
     // 当前用户ID（未登录时使用 guest）
     private var currentUserId: String = MainRepository.GUEST_USER_ID
     
+    // 当前选中的AI模型
+    private var currentModel: AIModel = AIModels.defaultModel
+    
     // 使用 HistoryModel 统一管理消息存储（新结构）
     private val historyModel = HistoryModel(context)
 
@@ -78,6 +84,20 @@ class ChatRepositoryExample private constructor(private val context: Context) {
      */
     fun setCurrentUserId(userId: String) {
         currentUserId = userId
+    }
+    
+    /**
+     * 设置当前选中的AI模型
+     */
+    fun setCurrentModel(model: AIModel) {
+        currentModel = model
+    }
+    
+    /**
+     * 获取当前选中的AI模型
+     */
+    fun getCurrentModel(): AIModel {
+        return currentModel
     }
     
     fun setOnConversationRefreshListener(listener: OnConversationRefreshListener?) {
@@ -357,13 +377,31 @@ class ChatRepositoryExample private constructor(private val context: Context) {
     }
     
     /**
-     * 模拟 AI 流式回复 (打字机效果)
+     * AI 流式回复 (打字机效果)
+     * 根据当前选中的模型调用对应的 API
+     * 如果 API 调用失败（网络问题等），先显示错误信息，再回退到模拟回复
      */
     private fun streamAiResponse(userQuery: String, conversationId: String): Flow<String> = flow {
-        // 模拟深度思考时间
-        delay(1000 + (Math.random() * 1000).toLong()) // 1-2秒随机延迟
+        // 显示思考中状态
+        emit("正在思考中...")
         
-        val fullResponse = mockAiResponse(userQuery)
+        // 调用 AI API 获取回复，失败时先显示错误再回退到模拟回复
+        val fullResponse = try {
+            val result = AiHelper.chatWithModel(currentModel, userQuery)
+            if (result.isSuccess) {
+                result.getOrNull() ?: mockAiResponse(userQuery) // 内容为空也使用模拟回复
+            } else {
+                // API调用失败，先显示错误信息，再显示模拟回复
+                val errorMsg = result.exceptionOrNull()?.message ?: "未知错误"
+                android.util.Log.w("ChatRepository", "API调用失败: $errorMsg")
+                buildErrorWithFallbackResponse(errorMsg, userQuery)
+            }
+        } catch (e: Exception) {
+            // 发生异常（网络问题等），先显示错误信息，再显示模拟回复
+            android.util.Log.w("ChatRepository", "发生异常: ${e.message}")
+            buildErrorWithFallbackResponse(e.message ?: "未知异常", userQuery)
+        }
+        
         val stringBuilder = StringBuilder()
 
         // 优化：减少更新频率，避免过于频繁的UI刷新
@@ -376,7 +414,7 @@ class ChatRepositoryExample private constructor(private val context: Context) {
 
         // 模拟逐字输出，速度随机变化
         for (char in fullResponse) {
-            delay((20 + Math.random() * 40).toLong()) // 20-60ms随机延迟
+            delay((15 + Math.random() * 25).toLong()) // 15-40ms随机延迟（加快显示速度）
             stringBuilder.append(char)
             
             val currentTime = System.currentTimeMillis()
@@ -397,6 +435,21 @@ class ChatRepositoryExample private constructor(private val context: Context) {
         if (stringBuilder.isNotEmpty()) {
             emit(stringBuilder.toString())
         }
+    }
+
+    /**
+     * 构建包含错误信息和模拟回复的完整响应
+     * 先显示错误信息方便定位问题，再显示模拟回复保证展示效果
+     */
+    private fun buildErrorWithFallbackResponse(errorMsg: String, query: String): String {
+        return """⚠️ **API调用失败**
+> $errorMsg
+
+---
+
+**以下为模拟回复：**
+
+${mockAiResponse(query)}"""
     }
 
     private fun mockAiResponse(query: String): String {

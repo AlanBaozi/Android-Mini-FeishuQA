@@ -56,7 +56,7 @@ class MainActivity : AppCompatActivity() {
         // 创建ViewModel
         viewModel = ViewModelProvider(this, MainViewModelFactory(this))[MainViewModel::class.java]
 
-        // 初始化ChatRepositoryExample的用户ID
+        // 初始化ChatRepositoryExample的用户ID和默认模型
         val chatRepository = com.example.feishuqa.data.repository.ChatRepositoryExample.getInstance(applicationContext)
         val userId = if (SessionManager.isLoggedIn(this)) {
             SessionManager.getUserId(this) ?: MainRepository.GUEST_USER_ID
@@ -64,6 +64,8 @@ class MainActivity : AppCompatActivity() {
             MainRepository.GUEST_USER_ID
         }
         chatRepository.setCurrentUserId(userId)
+        // 设置默认模型
+        chatRepository.setCurrentModel(com.example.feishuqa.data.entity.AIModels.defaultModel)
         
         // 设置对话列表刷新监听器
         chatRepository.setOnConversationRefreshListener(object : com.example.feishuqa.data.repository.ChatRepositoryExample.OnConversationRefreshListener {

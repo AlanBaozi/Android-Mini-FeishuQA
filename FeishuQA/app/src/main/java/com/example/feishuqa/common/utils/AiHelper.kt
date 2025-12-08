@@ -5,6 +5,7 @@ package com.example.feishuqa.common.utils
  */
 
 import android.util.Log
+import com.example.feishuqa.data.entity.AIModel
 import com.google.gson.Gson
 import com.google.gson.annotations.SerializedName
 import kotlinx.coroutines.Dispatchers
@@ -29,7 +30,7 @@ object AiHelper
     }
 
     // DeepSeek 配置
-    private const val DEEPSEEK_API_KEY = "*"
+    private const val DEEPSEEK_API_KEY = "sk-61edf5f023ab4e35b87caed9ad01b376"
     private const val DEEPSEEK_URL = "https://api.deepseek.com/chat/completions"
 
     // 豆包配置
@@ -51,6 +52,44 @@ object AiHelper
         .writeTimeout(30, TimeUnit.SECONDS)
         .readTimeout(60, TimeUnit.SECONDS)
         .build()
+
+    /**
+     * 根据 AIModel 的 id 获取对应的 AiType
+     * 目前支持 deepseek-r1 和 doubao，其他模型返回 null（预留接口）
+     */
+    fun getAiTypeFromModelId(modelId: String): AiType? {
+        return when (modelId) {
+            "deepseek-r1" -> AiType.DEEPSEEK
+            "doubao" -> AiType.DOUBAO
+            // 以下模型预留接口，暂不支持
+            "gpt-4" -> null
+            "claude-3.5" -> null
+            "qwen" -> null
+            else -> null
+        }
+    }
+
+    /**
+     * 检查模型是否已配置API
+     */
+    fun isModelSupported(modelId: String): Boolean {
+        return getAiTypeFromModelId(modelId) != null
+    }
+
+    /**
+     * 根据 AIModel 调用对应的 API
+     * @param model AI模型实体
+     * @param question 用户问题
+     * @return 如果模型不支持，返回失败结果
+     */
+    suspend fun chatWithModel(model: AIModel, question: String): Result<String> {
+        val aiType = getAiTypeFromModelId(model.id)
+        return if (aiType != null) {
+            chat(aiType, question)
+        } else {
+            Result.failure(Exception("模型 ${model.name} 暂未配置API，敬请期待"))
+        }
+    }
 
     /**
      * 统一对话接口
