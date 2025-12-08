@@ -10,7 +10,8 @@ data class MessageDetail
     val content: String,
     val timestamp: Long,
     val senderType: Int, // 0=用户, 1=AI
-    val messageOrder: Int
+    val messageOrder: Int,
+    val imageUrl: String? = null // 图片URL
 )
 
 // 消息文件容器

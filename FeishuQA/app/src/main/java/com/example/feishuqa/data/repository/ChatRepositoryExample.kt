@@ -196,13 +196,16 @@ class ChatRepositoryExample private constructor(private val context: Context) {
             
             // 将 MessageDetail 转换为 Message
             val loadedMessages = messageDetails.map { detail ->
+                // 如果有 imageUrl，则消息类型为图片
+                val messageType = if (detail.imageUrl != null) MessageType.IMAGE else MessageType.TEXT
+                
                 Message(
                     id = detail.messageId,
                     conversationId = conversationId,
                     senderId = if (detail.senderType == 0) "user" else "ai",
-                    type = MessageType.TEXT, // MessageDetail 目前只支持文本
+                    type = messageType,
                     content = detail.content,
-                    extraInfo = null, // MessageDetail 没有 extraInfo
+                    extraInfo = detail.imageUrl, // 图片URL存储在 extraInfo 中
                     timestamp = detail.timestamp,
                     status = MessageStatus.SENT // 已保存的消息都是已发送状态
                 )
@@ -248,9 +251,23 @@ class ChatRepositoryExample private constructor(private val context: Context) {
             // 判断是用户消息还是AI消息
             val isUser = message.senderId == "user"
             
+            // 提取 imageUrl（如果消息类型是图片，从 extraInfo 中获取）
+            val imageUrl = if (message.type == MessageType.IMAGE) {
+                message.extraInfo // 图片消息的 extraInfo 存储图片URL
+            } else {
+                null
+            }
+            
             // 使用 HistoryModel 保存消息
-            // 注意：HistoryModel.addMessage() 会生成新的 messageId，与 Message.id 可能不同
-            historyModel.addMessage(conversationId, message.content, isUser)
+            // 传递 messageId 和 timestamp 以保持ID一致性
+            historyModel.addMessage(
+                conversationId = conversationId,
+                content = message.content,
+                isUser = isUser,
+                messageId = message.id,
+                timestamp = message.timestamp,
+                imageUrl = imageUrl
+            )
         } catch (e: Exception) {
             e.printStackTrace()
         }

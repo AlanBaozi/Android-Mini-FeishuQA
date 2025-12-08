@@ -418,9 +418,24 @@ class HistoryModel(private val context: Context) {
     /**
      * 添加一条消息（用户发送 或 AI回复）
      * 职责：计算分页 -> 写入消息文件 -> 更新会话索引
+     * @param conversationId 会话ID
+     * @param content 消息内容
+     * @param isUser 是否为用户消息
+     * @param messageId 消息ID（可选，如果不提供则自动生成）
+     * @param timestamp 时间戳（可选，如果不提供则使用当前时间）
+     * @param imageUrl 图片URL（可选）
+     * @return 新创建的消息
      */
-    fun addMessage(conversationId: String, content: String, isUser: Boolean): MessageDetail {
-        val timestamp = System.currentTimeMillis()
+    fun addMessage(
+        conversationId: String, 
+        content: String, 
+        isUser: Boolean,
+        messageId: String? = null,
+        timestamp: Long? = null,
+        imageUrl: String? = null
+    ): MessageDetail {
+        val now = timestamp ?: System.currentTimeMillis()
+        val msgId = messageId ?: "msg_${now}_${(1000..9999).random()}"
 
         // 1. 计算 Order 和 FileIndex
         val allMessages = getAllMessages(conversationId)
@@ -432,11 +447,12 @@ class HistoryModel(private val context: Context) {
 
         // 2. 构建消息实体
         val newMessage = MessageDetail(
-            messageId = "msg_${timestamp}_${(1000..9999).random()}", // 随机ID
+            messageId = msgId,
             content = content,
-            timestamp = timestamp,
+            timestamp = now,
             senderType = if (isUser) 0 else 1, // 0=用户, 1=AI
-            messageOrder = messageOrder
+            messageOrder = messageOrder,
+            imageUrl = imageUrl
         )
 
         // 3. 准备写入路径
@@ -474,7 +490,7 @@ class HistoryModel(private val context: Context) {
         updateIndexFile { indexFile ->
             val target = indexFile.conversations.find { it.conversationId == conversationId }
             if (target != null) {
-                target.updateTime = timestamp
+                target.updateTime = now
 
                 // 如果是第一条消息，设置会话标题
                 if (messageOrder == 1) {
