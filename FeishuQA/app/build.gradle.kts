@@ -79,6 +79,15 @@ dependencies {
     implementation("io.noties.markwon:linkify:4.6.2")
     // Markwon表格支持
     implementation("io.noties.markwon:ext-tables:4.6.2")
+    // 1. OkHttp: 用于发送网络请求
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
+    // 2. Gson: 用于解析 JSON 数据
+    implementation("com.google.code.gson:gson:2.10.1")
+    // 3. Kotlin Coroutines: 协程核心库 + Android 支持
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
+    // 4. Lifecycle KTX: 提供了 lifecycleScope，能在 Activity/Fragment 中方便地启动协程
+    implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.6.2")
     
     testImplementation(libs.junit)
     // AndroidX Test Core 用于 ApplicationProvider
