@@ -35,7 +35,7 @@ object ImageUtils {
             if (degree != 0) bitmap = rotateBitmap(bitmap, degree)
 
             // 缓存文件
-            val cacheDir = File(appContext.cacheDir, "chat_images")
+            val cacheDir = File(appContext.filesDir, "chat_images")
             if (!cacheDir.exists()) cacheDir.mkdirs()
             val targetFile = File(cacheDir, "IMG_${System.currentTimeMillis()}.jpg")
 
