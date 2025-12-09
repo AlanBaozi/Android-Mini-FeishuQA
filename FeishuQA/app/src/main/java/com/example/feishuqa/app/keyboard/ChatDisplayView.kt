@@ -57,9 +57,18 @@ class ChatDisplayView @JvmOverloads constructor(
                     val isNearBottom = lastVisiblePosition >= newSize - 2 // 判断是否接近底部
                     
                     when {
-                        // 如果是新消息且用户在底部附近，滚动到新消息
-                        newSize > oldSize && isNearBottom -> {
-                            scheduleScrollToPosition(newSize - 1, smooth = true)
+                        // 如果是新消息，检查是否是用户发送的消息
+                        newSize > oldSize -> {
+                            val lastMessage = list.lastOrNull()
+                            val isUserMessage = lastMessage?.senderId == "user"
+                            
+                            if (isUserMessage) {
+                                // 用户发送的消息，总是滚动到底部，使用平滑动画
+                                scheduleScrollToPosition(newSize - 1, smooth = true, forceImmediate = true)
+                            } else if (isNearBottom) {
+                                // AI回复，只在用户在底部附近时滚动
+                                scheduleScrollToPosition(newSize - 1, smooth = true)
+                            }
                         }
                         // 如果是内容更新（流式回复），只在用户已经在底部时滚动
                         newSize == oldSize && lastVisiblePosition == newSize - 1 -> {
@@ -74,10 +83,22 @@ class ChatDisplayView @JvmOverloads constructor(
     }
     
     // 新增：防抖滚动机制（智能延迟，表格内容延长到150ms）
-    private fun scheduleScrollToPosition(position: Int, smooth: Boolean = false) {
+    private fun scheduleScrollToPosition(position: Int, smooth: Boolean = false, forceImmediate: Boolean = false) {
         // 取消之前的滚动任务
         scrollHandler.removeCallbacksAndMessages(null)
         pendingScrollPosition = position
+        
+        // 如果是强制立即执行（用户发送消息），直接滚动
+        if (forceImmediate) {
+            if (smooth) {
+                rvChat.smoothScrollToPosition(position)
+            } else {
+                val layoutManager = rvChat.layoutManager as LinearLayoutManager
+                layoutManager.scrollToPosition(position)
+            }
+            pendingScrollPosition = -1
+            return
+        }
         
         // 智能延迟：检测是否为表格内容
         val delay = if ((rvChat.adapter as? ChatAdapter)?.isMessageContainsTable(position) == true) {
@@ -98,6 +119,36 @@ class ChatDisplayView @JvmOverloads constructor(
                 pendingScrollPosition = -1
             }
         }, delay)
+    }
+    
+    // 新增：立即滚动到底部的方法，供外部调用
+    fun scrollToBottom(smooth: Boolean = true) {
+        val itemCount = adapter.itemCount
+        if (itemCount > 0) {
+            if (smooth) {
+                rvChat.smoothScrollToPosition(itemCount - 1)
+            } else {
+                val layoutManager = rvChat.layoutManager as LinearLayoutManager
+                layoutManager.scrollToPosition(itemCount - 1)
+            }
+        }
+    }
+    
+    // 新增：强制滚动到底部（忽略内部智能滚动逻辑）
+    fun forceScrollToBottom(smooth: Boolean = true) {
+        val itemCount = adapter.itemCount
+        if (itemCount > 0) {
+            // 取消所有待处理的滚动任务
+            scrollHandler.removeCallbacksAndMessages(null)
+            pendingScrollPosition = -1
+            
+            if (smooth) {
+                rvChat.smoothScrollToPosition(itemCount - 1)
+            } else {
+                val layoutManager = rvChat.layoutManager as LinearLayoutManager
+                layoutManager.scrollToPosition(itemCount - 1)
+            }
+        }
     }
     
     // 新增：清理资源

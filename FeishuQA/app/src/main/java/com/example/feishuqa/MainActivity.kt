@@ -172,6 +172,25 @@ class MainActivity : AppCompatActivity() {
         
         // 保存displayViewModel实例用于导航事件
         this.displayViewModel = displayViewModel
+        
+        // 【新增】监听消息发送事件，当用户发送消息时主动滚动到底部
+        val chatRepository = com.example.feishuqa.data.repository.ChatRepositoryExample.getInstance(applicationContext)
+        chatRepository.setOnMessageSendListener(object : com.example.feishuqa.data.repository.ChatRepositoryExample.OnMessageSendListener {
+            override fun onMessageSend() {
+                // 用户发送消息时，滚动到用户消息位置（平滑动画）
+                binding.chatDisplayView.scrollToBottom(smooth = true)
+            }
+            
+            override fun onAiMessageAdded() {
+                // AI消息添加完成时，强制滚动到底部，确保能看到AI回复
+                // 使用较长延迟，确保：
+                // 1. AI消息已经完全添加到列表
+                // 2. 流式回复已经开始，用户能看到回复过程
+                binding.chatDisplayView.postDelayed({
+                    binding.chatDisplayView.forceScrollToBottom(smooth = true)
+                }, 300)  // 增加到300ms，确保流式回复已经开始
+            }
+        })
     }
     
     private lateinit var displayViewModel: com.example.feishuqa.app.keyboard.ChatDisplayViewModel

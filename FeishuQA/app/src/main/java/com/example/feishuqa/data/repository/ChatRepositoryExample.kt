@@ -36,7 +36,14 @@ class ChatRepositoryExample private constructor(private val context: Context) {
         fun onConversationListRefreshNeeded()
     }
     
+    // 【新增】消息发送监听器接口
+    interface OnMessageSendListener {
+        fun onMessageSend()
+        fun onAiMessageAdded()  // 新增：AI消息添加完成回调
+    }
+    
     private var refreshListener: OnConversationRefreshListener? = null
+    private var messageSendListener: OnMessageSendListener? = null
 
     private val _messages = MutableLiveData<MutableList<Message>>(mutableListOf())
     val messages: LiveData<MutableList<Message>> = _messages
@@ -104,6 +111,11 @@ class ChatRepositoryExample private constructor(private val context: Context) {
         refreshListener = listener
     }
     
+    // 【新增】设置消息发送监听器
+    fun setOnMessageSendListener(listener: OnMessageSendListener?) {
+        messageSendListener = listener
+    }
+    
     /**
      * 获取当前用户ID
      */
@@ -164,6 +176,9 @@ class ChatRepositoryExample private constructor(private val context: Context) {
         )
         addMessageInternal(userMsg)
 
+        // 【新增】通知消息发送监听器，用户消息已发送
+        messageSendListener?.onMessageSend()
+
         // 2. 后台处理
         CoroutineScope(Dispatchers.IO).launch {
             var finalPath: String? = null
@@ -193,8 +208,15 @@ class ChatRepositoryExample private constructor(private val context: Context) {
             
             withContext(Dispatchers.Main) { addMessageInternal(aiMsg) }
             
+            // 【移除】AI消息添加完成，通知监听器 - 移到流式回复开始前
+            // messageSendListener?.onAiMessageAdded()
+            
             // 4. 流式输出 AI 回复
             var fullContent = ""
+            
+            // 【新增】流式回复开始前，先滚动到底部确保能看到回复过程
+            messageSendListener?.onAiMessageAdded()
+            
             streamAiResponse(text, conversationId).collect { partialContent ->
                 fullContent = partialContent
                 // 更新消息内容（逐字显示）
