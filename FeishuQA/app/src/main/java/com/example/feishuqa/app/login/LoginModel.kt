@@ -16,6 +16,7 @@ class LoginModel(private val context: Context)
 
     /**
      * 加载 assets 下的 user.json
+     * 暂时不用
      */
     fun loadUsers(context: Context): List<User>
     {
@@ -69,11 +70,11 @@ class LoginModel(private val context: Context)
                     val name = userJson.getString("name")
                     if (name == username)
                     {
-                        // 找到了这个用户，接下来检查密码
                         val pwd = userJson.getString("password")
+                        // 用户存在，检查密码
                         if (pwd == password)
                         {
-                            // 密码也正确 -> 登录成功
+                            // 密码正确，返回登录成功
                             val user = User(
                                 userId = userJson.getString("userId"),
                                 name = name,
@@ -83,7 +84,7 @@ class LoginModel(private val context: Context)
                         }
                         else
                         {
-                            // 用户名对，但密码错 -> 直接返回密码错误
+                            // 用户名对，但密码错，返回密码错误
                             return@withContext Result.failure(Exception("密码错误"))
                         }
                     }

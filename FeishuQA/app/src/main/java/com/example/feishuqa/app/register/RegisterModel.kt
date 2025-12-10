@@ -16,6 +16,7 @@ import org.json.JSONObject
  */
 class RegisterModel(private val context: Context)
 {
+    // 用户信息文件，userId, name, password
     private val fileName = "users.json"
 
     /**
@@ -70,7 +71,9 @@ class RegisterModel(private val context: Context)
                     password = password
                 )
                 Result.success(user)
-            } catch (e: Exception) {
+            }
+            catch (e: Exception)
+            {
                 Result.failure(e)
             }
         }

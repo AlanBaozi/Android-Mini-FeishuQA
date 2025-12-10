@@ -17,6 +17,8 @@ object JsonUtils
      * 从 assets 中读取 json 文件
      * @param context 上下文
      * @param fileName 文件名（例如 "user.json"）,路径为FeishuQA\app\src\main\assets
+     *
+     * @return 文件内容字符串，如果文件不存在或读取失败，则返回 "[]"
      */
     fun readJson(context: Context, fileName: String): String
     {
@@ -27,7 +29,8 @@ object JsonUtils
             val stringBuilder = StringBuilder()
 
             var line: String? = reader.readLine()
-            while (line != null) {
+            while (line != null)
+            {
                 stringBuilder.append(line)
                 line = reader.readLine()
             }
@@ -38,7 +41,7 @@ object JsonUtils
         catch (e: Exception)
         {
             e.printStackTrace()
-            ""
+            "[]"
         }
     }
 
@@ -57,7 +60,8 @@ object JsonUtils
         return try
         {
             val file = File(context.filesDir, fileName)
-            if (!file.exists()) return "[]"
+            if (!file.exists())
+                return "[]"
             file.readText()
         }
         catch (e: Exception)
@@ -72,16 +76,11 @@ object JsonUtils
      *
      * @param context 上下文，用于获取内部存储路径（context.filesDir）
      * @param fileName 文件名，例如 "conversation.json"
-     * @param jsonObject 要写入的 JSON 对象（会直接覆盖原内容）
+     * @param jsonObject 要写入的JSON对象
      *
-     * @return Boolean
-     *         true：写入成功
-     *         false：写入失败（发生异常）
+     * @return 返回写入操作的结果
      *
-     * 功能说明：
      * - 不读取旧文件内容，直接覆盖写入新的 JSONObject
-     * - 如果文件不存在会自动创建
-     * - 文件最终内容 = jsonObject.toString()
      */
     fun overwriteJsonObject(context: Context, fileName: String, jsonObject: JSONObject): Boolean
     {
@@ -93,7 +92,7 @@ object JsonUtils
             {
                 parent.mkdirs() // 自动创建目录
             }
-            file.writeText(jsonObject.toString())   // 直接覆盖写入
+            file.writeText(jsonObject.toString())   // 将JSONObject写入
             true
         }
         catch (e: Exception)
@@ -104,13 +103,13 @@ object JsonUtils
     }
 
     /**
-     * 覆盖写入 JSON 对象到内部存储文件（同步，直接覆盖）
+     * 覆盖写入JSON数组到内部存储文件（不追加，直接覆盖）
      *
      * @param context 上下文
      * @param fileName 文件名
-     * @param jsonObject 要写入的 JSON 对象
+     * @param JSONArray 要写入的JSON数组对象
      *
-     * @return Boolean
+     * @return 返回写入操作的结果
      */
     fun overwriteJsonArray(context: Context, fileName: String, jsonArray: JSONArray): Boolean
     {
@@ -122,8 +121,7 @@ object JsonUtils
             {
                 parent.mkdirs() // 自动创建目录
             }
-            // 核心操作：直接覆盖写入
-            file.writeText(jsonArray.toString()) // 使用传入的 JSONArray
+            file.writeText(jsonArray.toString()) // 将JSONArray写入
             true
         }
         catch (e: Exception)
@@ -140,13 +138,9 @@ object JsonUtils
      * @param context 上下文，用于获取内部存储路径
      * @param fileName 文件名，例如 "conversation.json"
      * @param newObject 要追加的新 JSON 对象
-     * @return Boolean
-     *         true：写入成功
-     *         false：写入失败（如解析失败或文件写入异常）
      *
-     * 功能说明：
-     * - 如果文件不存在或为空，则创建一个新的 JSON 数组
-     * - 如果文件已存在且是 JSON 数组，则在数组末尾追加新对象
+     * @return 返回写入操作的结果
+     *
      * - 写回文件时会覆盖原文件，但内容已包含原有数据 + 新对象
      */
     fun appendJsonObject(context: Context, fileName: String, newObject: JSONObject): Boolean
@@ -172,7 +166,6 @@ object JsonUtils
                 parent.mkdirs()
             }
             file.writeText(jsonArray.toString())
-
             true
         }
         catch (e: Exception)
@@ -183,10 +176,11 @@ object JsonUtils
     }
 
     /**
-     * 删除对话文件
+     * 删除JSON文件
      *
      * @param context 上下文
      * @param fileName 文件名
+     *
      * @return 是否删除成功
      *
      * 可以删除文件，也可以删除空目录。
@@ -203,67 +197,6 @@ object JsonUtils
             else
             {
                 true
-            }
-        }
-        catch (e: Exception)
-        {
-            e.printStackTrace()
-            false
-        }
-    }
-
-    /**
-     * 获取所有对话文件列表（遍历目录）
-     *
-     * @param context 上下文，用于获取内部存储路径
-     * @return 对话文件名列表，按文件名倒序排列（最新的在前）
-     */
-    fun getAllConversationFiles(context: Context): List<String>
-    {
-        return try
-        {
-            val filesDir = context.filesDir
-            val files = filesDir.listFiles()
-            files?.filter {
-                it.name.startsWith("conversation_") && it.name.endsWith(".json")
-            }?.map { it.name }
-                ?.sortedDescending()  // 按文件名倒序（时间戳大的在前）
-                ?: emptyList()
-        }
-        catch (e: Exception)
-        {
-            e.printStackTrace()
-            emptyList()
-        }
-    }
-
-    /**
-     * 从文件名提取对话 ID（时间戳）
-     *
-     * @param fileName 文件名，例如 "conversation_1703123456789.json"
-     * @return 对话 ID（时间戳字符串），例如 "1703123456789"
-     */
-    fun extractIdFromFileName(fileName: String): String
-    {
-        return fileName.removePrefix("conversation_").removeSuffix(".json")
-    }
-
-    /**
-     * 删除对话文件
-     *
-     * @param context 上下文
-     * @param fileName 文件名
-     * @return 是否删除成功
-     */
-    fun deleteConversationFile(context: Context, fileName: String): Boolean
-    {
-        return try
-        {
-            val file = File(context.filesDir, fileName)
-            if (file.exists()) {
-                file.delete()
-            } else {
-                true  // 文件不存在也算成功
             }
         }
         catch (e: Exception)
