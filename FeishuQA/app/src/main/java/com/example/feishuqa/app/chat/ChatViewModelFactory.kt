@@ -1,11 +1,10 @@
-package com.example.feishuqa.app.keyboard
+package com.example.feishuqa.app.chat
 
 import android.app.Application
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
-import com.example.feishuqa.app.chat.ChatViewModel
+import com.example.feishuqa.app.keyboard.ChatInputViewModel
 import com.example.feishuqa.data.repository.ChatRepositoryExample
-import kotlin.jvm.java
 
 // --- 通用工厂类 (用于注入 Repository) ---
 class ChatViewModelFactory(

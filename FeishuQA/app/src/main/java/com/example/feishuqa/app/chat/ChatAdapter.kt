@@ -1,6 +1,8 @@
-package com.example.feishuqa.app.keyboard
+package com.example.feishuqa.app.chat
 
 import android.content.Context
+import android.os.Handler
+import android.os.Looper
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -10,6 +12,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import com.example.feishuqa.R
 import com.example.feishuqa.data.entity.Message
+import com.example.feishuqa.data.entity.MessageType
 import io.noties.markwon.Markwon
 import io.noties.markwon.ext.strikethrough.StrikethroughPlugin
 import io.noties.markwon.linkify.LinkifyPlugin
@@ -80,7 +83,7 @@ class ChatAdapter(private val context: Context, private val onImageClick: (Strin
                 // 对于包含表格的内容，使用延迟更新策略减少抖动
                 if (newContent.contains("|") && newContent.contains("\n")) {
                     // 延迟100ms更新，让表格解析完成后再刷新
-                    android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+                    Handler(Looper.getMainLooper()).postDelayed({
                         if (position in 0 until messages.size) {
                             notifyItemChanged(position)
                         }
@@ -162,7 +165,7 @@ class ChatAdapter(private val context: Context, private val onImageClick: (Strin
             }
 
             // 设置图片
-            if (msg.type == com.example.feishuqa.data.entity.MessageType.IMAGE && msg.extraInfo != null) {
+            if (msg.type == MessageType.IMAGE && msg.extraInfo != null) {
                 ivImage.visibility = View.VISIBLE
                 Glide.with(itemView.context)
                     .load(msg.extraInfo)

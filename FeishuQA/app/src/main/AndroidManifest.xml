@@ -50,12 +50,7 @@
             android:exported="false"
             android:theme="@style/Theme.FeishuQA" />
 
-        <!-- 聊天页 -->
-        <activity
-            android:name=".app.chat.ChatActivity"
-            android:exported="false"
-            android:theme="@style/Theme.FeishuQA"
-            android:windowSoftInputMode="adjustResize" />
+
     </application>
 
     <uses-permission android:name="android.permission.RECORD_AUDIO"

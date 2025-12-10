@@ -13,9 +13,9 @@ import androidx.core.content.ContextCompat
 import androidx.core.view.GravityCompat
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
-import com.example.feishuqa.app.keyboard.ChatDisplayViewModel
+import com.example.feishuqa.app.chat.ChatDisplayViewModel
 import com.example.feishuqa.app.keyboard.ChatInputView
-import com.example.feishuqa.app.keyboard.ChatViewModelFactory
+import com.example.feishuqa.app.chat.ChatViewModelFactory
 import com.example.feishuqa.app.login.LoginActivity
 import com.example.feishuqa.app.main.MainView
 import com.example.feishuqa.app.main.MainViewModel

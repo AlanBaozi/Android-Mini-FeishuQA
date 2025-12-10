@@ -1,4 +1,4 @@
-package com.example.feishuqa.app.keyboard
+package com.example.feishuqa.app.chat
 
 import android.content.Context
 import android.util.AttributeSet

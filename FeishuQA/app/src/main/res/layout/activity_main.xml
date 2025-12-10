@@ -120,7 +120,7 @@
         </androidx.constraintlayout.widget.ConstraintLayout>
 
         <!-- 聊天消息显示区域 -->
-        <com.example.feishuqa.app.keyboard.ChatDisplayView
+        <com.example.feishuqa.app.chat.ChatDisplayView
             android:id="@+id/chatDisplayView"
             android:layout_width="0dp"
             android:layout_height="0dp"
