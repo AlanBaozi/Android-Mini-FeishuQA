@@ -24,9 +24,9 @@ import java.io.File
 class HistoryModel(private val context: Context) {
 
     private val jsonFormatter = Json {
-        ignoreUnknownKeys = true // 即使JSON里有多余字段也不报错
-        prettyPrint = true       // 生成的JSON格式好看
-        encodeDefaults = true    // 默认值也会写入JSON
+        ignoreUnknownKeys = true
+        prettyPrint = true
+        encodeDefaults = true
     }
 
     private val INDEX_FILE_PATH = "index/conversations.json"
@@ -52,26 +52,26 @@ class HistoryModel(private val context: Context) {
     private fun getAllConversationIndexes(userId: String): List<ConversationIndex> {
         val jsonContent = JsonUtils.readJsonFromFiles(context, INDEX_FILE_PATH)
 
-        // 判空处理
-        if (jsonContent.isBlank() || jsonContent == "[]") {
+        if (jsonContent.isBlank() || jsonContent == "[]")
+        {
             return emptyList()
         }
 
-        return try {
-            // 1. 解码：将整个 JSON 字符串直接转换为 ConversationIndexFile 对象
+        return try
+        {
+            // 将JSON字符串转换为 ConversationIndexFile对象
             val indexFile = jsonFormatter.decodeFromString<ConversationIndexFile>(jsonContent)
 
-            // 2. 过滤和排序 (使用 Kotlin 集合操作，代码简洁高效)
+            // 过滤和排序
             indexFile.conversations
-                // 过滤：排除已删除的 (!it.isDeleted) 且只保留当前用户的 (it.userId == userId)
+                // 过滤已删除的且只保留当前用户的
                 .filter { !it.isDeleted && it.userId == userId }
-                // 排序：先按置顶降序，再按更新时间降序
+                // 先按置顶降序，再按更新时间降序
                 .sortedWith(
                     compareByDescending<ConversationIndex> { it.isPinned }
                         .thenByDescending { it.updateTime }
                 )
         } catch (e: Exception) {
-            // 解析失败，返回空列表
             e.printStackTrace()
             emptyList()
         }
@@ -119,100 +119,92 @@ class HistoryModel(private val context: Context) {
 
     /**
      * 获取指定会话的所有消息内容
-     * 职责：循环读取 messages/{convId}/ 目录下所有分页文件，并合并消息
+     * 循环读取 messages/{convId}/ 目录下所有分页文件，并合并消息
      *
      * @param conversationId 要获取消息的会话ID
      * @return List<MessageDetail> 包含所有已排序的消息列表
      */
     fun getAllMessages(conversationId: String): List<MessageDetail> {
-        // 1. 获取会话索引信息，确保目录路径是已知的
+        // 获取会话索引信息
         val index = getConversationIndexById(conversationId) ?: return emptyList()
 
         val allMessages = mutableListOf<MessageDetail>()
         var fileIndex = 1
 
-        // 2. 分页读取循环
+        // 分页读取循环
         while (true) {
             // 构造分页文件名 (例如: messages/conversation_1764992458418/messages_001.json)
             val fileName = "${index.messageDir}/messages_${fileIndex.toString().padStart(3, '0')}.json"
 
-            // 使用 JsonUtils 读取文件内容
             val jsonString = JsonUtils.readJsonFromFiles(context, fileName)
 
             // 如果返回 "[]" 或空，说明读到头了，停止循环
             if (jsonString == "[]" || jsonString.isBlank()) break
 
             try {
-                // 3. 反序列化为 MessageFile 对象
+                // 反序列化为 MessageFile 对象
                 // MessageFile 包含了这一批消息 (1-100 或 101-200)
                 val messageFile = jsonFormatter.decodeFromString<MessageFile>(jsonString)
 
                 // 将读取到的消息加入总列表
                 allMessages.addAll(messageFile.messages)
 
-                // 准备读取下一页
+                // 继续读取下一个文件
                 fileIndex++
             } catch (e: Exception) {
-                // 文件解析失败，通常意味着数据损坏，中断读取
                 e.printStackTrace()
                 break
             }
         }
 
-        // 4. 按 messageOrder 排序返回
+        // 按messageOrder排序返回
         return allMessages.sortedBy { it.messageOrder }
     }
 
     /**
      * 根据 conversationId 获取会话详情
      * @param conversationId String  要查找的会话的唯一标识 ID
-     * @return ConversationDetail?   如果成功找到并解析，返回该会话的详情对象；
-     * 如果会话不存在、已被删除或文件读取失败，则返回 null
+     * @return 返回该会话的详情对象 ConversationDetail
      */
     fun getConversationDetail(conversationId: String): ConversationDetail? {
-        // 第一步：去查索引表
+        // 找到对应的ConversationIndex
         val index = getConversationIndexById(conversationId) ?: return null
 
-        // 第二步：根据查到的路径，去读取真正的详情文件
+        // 根据查到的路径，去读取详情文件
         return loadConversationDetail(index.dataFile)
     }
 
     /**
      * 更新会话标题
-     * 职责：修改索引文件和详情文件中的标题和更新时间
-     *
      * @param conversationId 要修改的会话ID
      * @param newTitle 新的会话标题
      */
     fun updateConversationTitle(conversationId: String, newTitle: String) {
         val now = System.currentTimeMillis()
 
-        // 1. 更新索引文件 (Index File)
+        // 更新索引文件
         updateConversationIndex(conversationId) { index ->
             index.title = newTitle
             index.updateTime = now
         }
 
-        // 2. 同时更新详情文件 (Detail File)
+        // 更新详情文件
         getConversationDetail(conversationId)?.let { detail ->
             // 路径格式固定为: conversations/{ID}.json
             val detailFilePath = "conversations/${detail.conversationId}.json"
 
-            // 使用 data class 的 copy 方法创建新对象并修改字段
             val updatedDetail = detail.copy(
                 title = newTitle,
                 updateTime = now
             )
 
-            // 写入详情文件，使用重建的路径
             saveObjectToJsonFile(detailFilePath, updatedDetail)
         }
     }
 
     /**
      * 软删除会话
-     * 职责：在会话索引文件中将 isDeleted 标志设为 true，从而将该会话从列表中隐藏
-     * 详情文件和消息文件保留在磁盘上，以便将来可能恢复
+     * 在会话索引文件中将 isDeleted 标志设为 true，从而将该会话从列表中隐藏
      */
     fun deleteConversation(conversationId: String) {
         // 调用 updateConversationIndex，传入修改逻辑
@@ -302,11 +294,11 @@ class HistoryModel(private val context: Context) {
      * @return 新创建的 ConversationIndex 实体
      */
     fun createConversation(userId: String, initialTitle: String = "新对话"): ConversationIndex {
-        // 1. 生成必要信息
+
         val now = System.currentTimeMillis()
         val conversationId = generateId("conversation") // 使用辅助函数生成唯一ID
 
-        // 2. 创建 ConversationIndex 实体
+        // 创建 ConversationIndex 实体
         val newIndex = ConversationIndex(
             conversationId = conversationId,
             userId = userId,
@@ -320,7 +312,6 @@ class HistoryModel(private val context: Context) {
             messageDir = "messages/$conversationId"
         )
 
-        // 3. 读取现有索引或创建新的索引容器
         val jsonContent = JsonUtils.readJsonFromFiles(context, INDEX_FILE_PATH)
 
         // 定义索引文件容器 (对应文档中的 ConversationIndexFile 结构)
@@ -346,7 +337,7 @@ class HistoryModel(private val context: Context) {
             indexFileObj.put("version", "1.0")
         }
 
-        // 4. 将新会话转换为 JSONObject 并追加
+        // 新会话转换为JSONObject并追加
         val newIndexJson = JSONObject()
         newIndexJson.put("conversationId", newIndex.conversationId)
         newIndexJson.put("userId", newIndex.userId)
@@ -360,14 +351,12 @@ class HistoryModel(private val context: Context) {
 
         conversationsArray.put(newIndexJson)
 
-        // 5. 更新元数据并覆盖写入整个文件
         indexFileObj.put("lastUpdateTime", now)
         indexFileObj.put("conversations", conversationsArray)
 
-        // 使用工具类写入文件
         JsonUtils.overwriteJsonObject(context, INDEX_FILE_PATH, indexFileObj)
 
-        // 6. 构建详情文件的 JSONObject
+        // 构建详情文件的JSONObject
         val detailJson = JSONObject()
         detailJson.put("conversationId", newIndex.conversationId)
         detailJson.put("userId", userId)
@@ -375,10 +364,9 @@ class HistoryModel(private val context: Context) {
         detailJson.put("createTime", newIndex.createTime)
         detailJson.put("updateTime", newIndex.updateTime)
         detailJson.put("isPinned", newIndex.isPinned)
-        detailJson.put("modelType", "gpt-3.5") // 默认模型，文档要求
+        detailJson.put("modelType", "gpt-3.5")
         detailJson.put("messageDir", newIndex.messageDir)
 
-        // 7. 写入详情文件
         JsonUtils.overwriteJsonObject(context, newIndex.dataFile, detailJson)
 
         return newIndex
@@ -406,7 +394,7 @@ class HistoryModel(private val context: Context) {
         val now = timestamp ?: System.currentTimeMillis()
         val msgId = messageId ?: "msg_${now}_${(1000..9999).random()}"
 
-        // 1. 计算 Order 和 FileIndex
+        // 计算 Order 和 FileIndex
         val allMessages = getAllMessages(conversationId)
         val messageOrder = allMessages.size + 1 // 消息序号：总数 + 1
 
@@ -414,7 +402,6 @@ class HistoryModel(private val context: Context) {
         // 规则：(Order - 1) / 100 + 1
         val fileIndex = (messageOrder - 1) / MESSAGES_PER_FILE + 1
 
-        // 2. 构建消息实体
         val newMessage = MessageDetail(
             messageId = msgId,
             content = content,
@@ -424,14 +411,14 @@ class HistoryModel(private val context: Context) {
             imageUrl = imageUrl
         )
 
-        // 3. 准备写入路径
+        // 写入路径
         val index = getConversationIndexById(conversationId)
             ?: throw IllegalStateException("会话ID不存在或已被软删除")
 
         // 路径: messages/conv_xxx/messages_001.json
         val fileName = "${index.messageDir}/messages_${fileIndex.toString().padStart(3, '0')}.json"
 
-        // 4. 读取该分页文件 (如果存在) 或 创建新的 MessageFile
+        // 读取该分页文件 (如果存在) 或 创建新的 MessageFile
         val jsonString = JsonUtils.readJsonFromFiles(context, fileName)
 
         val messageFile = if (jsonString != "[]" && jsonString.isNotBlank()) {
@@ -447,14 +434,13 @@ class HistoryModel(private val context: Context) {
             MessageFile(conversationId, fileIndex, 0)
         }
 
-        // 5. 添加消息并保存
+        // 添加消息并保存
         messageFile.messages.add(newMessage)
         messageFile.messageCount = messageFile.messages.size
 
         // 写入消息文件
         saveObjectToJsonFile(fileName, messageFile)
 
-        // 6. 更新索引 (Index File)
         // 更新 updateTime 和 title
         updateIndexFile { indexFile ->
             val target = indexFile.conversations.find { it.conversationId == conversationId }
@@ -482,38 +468,32 @@ class HistoryModel(private val context: Context) {
     }
 
     /**
-     * 辅助：索引文件更新的通用封装
-     * 职责：读取整个索引文件，执行修改操作，并覆盖写回磁盘
+     * 读取整个索引文件，执行修改操作，并覆盖写回磁盘
      */
     private fun updateIndexFile(action: (ConversationIndexFile) -> Unit) {
-        // 1. 读取 JSON 字符串
         val jsonString = JsonUtils.readJsonFromFiles(context, INDEX_FILE_PATH)
 
-        // 2. 解码整个文件结构
         val indexFile = if (jsonString.isBlank() || jsonString == "[]") {
             ConversationIndexFile()
         } else {
             try {
                 jsonFormatter.decodeFromString<ConversationIndexFile>(jsonString)
             } catch (e: Exception) {
-                // 解析失败时，返回一个空的结构，避免程序崩溃
                 ConversationIndexFile()
             }
         }
 
-        // 3. 应用外部传入的修改逻辑 (action lambda)
+        // 应用外部传入的修改逻辑
         action(indexFile)
 
-        // 4. 更新元数据并编码写入
+        // 更新时间
         val updatedFile = indexFile.copy(lastUpdateTime = System.currentTimeMillis())
 
-        // 使用桥接函数写入文件
         saveObjectToJsonFile(INDEX_FILE_PATH, updatedFile)
     }
 
     /**
-     * 核心：查找并更新索引文件中的目标项
-     * 职责：在索引列表中找到 conversationId 对应的 ConversationIndex，并应用 updater
+     * 查找并更新索引文件中的目标项
      */
     private fun updateConversationIndex(conversationId: String, updater: (ConversationIndex) -> Unit) {
         // 调用 updateIndexFile，并传入具体的查找和修改逻辑
@@ -530,15 +510,13 @@ class HistoryModel(private val context: Context) {
      * 辅助：从文件加载 ConversationDetail
      */
     private fun loadConversationDetail(fileName: String): ConversationDetail? {
-        // 1. 调用工具类 JsonUtils 读取文件内容
         val jsonString = JsonUtils.readJsonFromFiles(context, fileName)
 
-        // 2. 如果是空或者 "[]"，直接返回 null
         if (jsonString == "[]" || jsonString.isBlank())
             return null
 
         return try {
-            // 3. 反序列化
+            // 反序列化
             jsonFormatter.decodeFromString<ConversationDetail>(jsonString)
         } catch (e: Exception) {
             e.printStackTrace()
@@ -547,20 +525,20 @@ class HistoryModel(private val context: Context) {
     }
 
     /**
-     * 辅助：根据 ID 查找会话索引
+     * 辅助：根据conversationId查找会话索引
      */
     private fun getConversationIndexById(conversationId: String): ConversationIndex? {
-        // 1. 读取总索引文件 (index/conversations.json)
+        // 读取总索引文件 (index/conversations.json)
         val jsonString = JsonUtils.readJsonFromFiles(context, INDEX_FILE_PATH)
 
         if (jsonString == "[]" || jsonString.isBlank())
             return null
 
         return try {
-            // 2. 将整个大 JSON 字符串转为 ConversationIndexFile 对象
+            // 将JSON字符串转为ConversationIndexFile对象
             val indexFile = jsonFormatter.decodeFromString<ConversationIndexFile>(jsonString)
 
-            // 3. 在列表中找到一个 item，ID相同且并且没有被标记为删除
+            // 找到conversationId相同且并且没有被标记为删除的ConversationIndex
             indexFile.conversations.find { it.conversationId == conversationId && !it.isDeleted }
         } catch (e: Exception) {
             e.printStackTrace()
@@ -569,7 +547,7 @@ class HistoryModel(private val context: Context) {
     }
 
     /**
-     * 核心桥接函数：Kotlin对象 -> JSONObject -> JsonUtils
+     * Kotlin对象 -> JSONObject -> JsonUtils
      */
     private inline fun <reified T> saveObjectToJsonFile(fileName: String, obj: T) {
         try {
