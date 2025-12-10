@@ -3,8 +3,6 @@ package com.example.feishuqa.app.main
 import android.app.AlertDialog
 import android.content.Context
 import android.content.Intent
-import android.text.Editable
-import android.text.TextWatcher
 import android.view.View
 import android.view.animation.Animation
 import android.view.animation.RotateAnimation
@@ -13,12 +11,13 @@ import android.widget.RadioGroup
 import android.widget.Toast
 import androidx.core.view.GravityCompat
 import androidx.lifecycle.LifecycleOwner
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
-import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.feishuqa.R
 import com.example.feishuqa.MainActivity
-import com.example.feishuqa.adapter.HistoryConversationAdapter
+import com.example.feishuqa.app.history.HistoryView
+import com.example.feishuqa.app.history.HistoryViewModel
 import com.example.feishuqa.app.keyboard.ChatInputView
 import com.example.feishuqa.app.login.LoginActivity
 import com.example.feishuqa.data.entity.AIModel
@@ -40,7 +39,8 @@ class MainView(
     private val lifecycleOwner: LifecycleOwner
 ) {
 
-    private lateinit var historyAdapter: HistoryConversationAdapter
+    private lateinit var historyView: HistoryView
+    private lateinit var historyViewModel: HistoryViewModel
 
 
 
@@ -48,6 +48,27 @@ class MainView(
      * 初始化View
      */
     fun init() {
+        // 初始化历史对话 ViewModel 和 View
+        historyViewModel = ViewModelProvider(
+            lifecycleOwner as androidx.lifecycle.ViewModelStoreOwner,
+            HistoryViewModel.Factory(context)
+        )[HistoryViewModel::class.java]
+        
+        historyView = HistoryView(
+            context = context,
+            drawerBinding = drawerBinding,
+            viewModel = historyViewModel,
+            lifecycleOwner = lifecycleOwner
+        ).apply {
+            onConversationClick = { conversationId ->
+                viewModel.selectConversation(conversationId)
+            }
+            onCloseDrawer = {
+                binding.drawerLayout.closeDrawer(GravityCompat.START)
+            }
+        }
+        historyView.init()
+        
         // 刷新登录状态
         viewModel.refreshLoginState()
         
@@ -141,65 +162,6 @@ class MainView(
         drawerBinding.layoutKnowledgeBase.setOnClickListener {
             Toast.makeText(context, "打开知识库", Toast.LENGTH_SHORT).show()
         }
-
-        // 设置历史对话列表
-        setupHistoryList()
-    }
-
-    /**
-     * 设置历史对话列表
-     */
-    private fun setupHistoryList() {
-        historyAdapter = HistoryConversationAdapter(
-            onItemClick = { conversation ->
-                binding.drawerLayout.closeDrawer(GravityCompat.START)
-                viewModel.selectConversation(conversation.id)
-            },
-            onDeleteClick = { conversationId ->
-                viewModel.deleteConversation(conversationId)
-            },
-            onRenameClick = { conversationId, currentTitle ->
-                showRenameDialog(conversationId, currentTitle)
-            },
-            onPinClick = { conversationId, isPinned ->
-                viewModel.togglePinConversation(conversationId)
-            }
-        )
-
-        drawerBinding.rvHistory.apply {
-            layoutManager = LinearLayoutManager(context)
-            adapter = historyAdapter
-        }
-
-        // 设置搜索框
-        drawerBinding.etSearchHistory.addTextChangedListener(object : TextWatcher {
-            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
-            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
-            override fun afterTextChanged(s: Editable?) {
-                viewModel.updateSearchQuery(s?.toString() ?: "")
-            }
-        })
-    }
-
-    /**
-     * 显示重命名对话框
-     */
-    private fun showRenameDialog(conversationId: String, currentTitle: String) {
-        val input = android.widget.EditText(context)
-        input.setText(currentTitle)
-        input.selectAll()
-
-        AlertDialog.Builder(context)
-            .setTitle("重命名对话")
-            .setView(input)
-            .setPositiveButton("确定") { _, _ ->
-                val newTitle = input.text.toString().trim()
-                if (newTitle.isNotEmpty()) {
-                    viewModel.renameConversation(conversationId, newTitle)
-                }
-            }
-            .setNegativeButton("取消", null)
-            .show()
     }
 
 
@@ -224,6 +186,9 @@ class MainView(
                             if (state.isLoggedIn && state.recommendedTopics.isEmpty() && !state.isLoadingRecommendations) {
                                 viewModel.loadRecommendations()
                             }
+                            // 更新历史对话 View 的用户ID
+                            val userId = state.userId ?: "guest"
+                            historyView.setUserId(userId)
                         }
                     }
                 }
@@ -274,18 +239,10 @@ class MainView(
         // 更新登录状态显示
         updateLoginUI(state)
         
-        // 更新对话列表（使用过滤后的列表）
-        val filteredConversations = state.getFilteredConversations()
-        historyAdapter.submitList(filteredConversations)
-        historyAdapter.setSelectedConversation(state.selectedConversationId)
-        
-        if (filteredConversations.isEmpty() && !state.isLoading) {
-            drawerBinding.rvHistory.visibility = View.GONE
-            drawerBinding.layoutEmptyState.visibility = View.VISIBLE
-        } else {
-            drawerBinding.rvHistory.visibility = View.VISIBLE
-            drawerBinding.layoutEmptyState.visibility = View.GONE
-        }
+        // 更新历史对话 View 的用户ID和选中状态
+        val userId = state.userId ?: "guest"
+        historyView.setUserId(userId)
+        historyViewModel.selectConversation(state.selectedConversationId ?: "")
 
         // 更新 ChatInputView 上的状态显示 (模型名称、联网高亮)
         val tvSelectedModel = chatInputView.findViewById<android.widget.TextView>(R.id.tv_selected_model)
@@ -469,5 +426,12 @@ class MainView(
         
         // 显示提示
         Toast.makeText(context, "已切换到新对话", Toast.LENGTH_SHORT).show()
+    }
+
+    /**
+     * 删除 guest 用户的所有对话（用于应用关闭时清理）
+     */
+    fun deleteGuestConversations() {
+        historyViewModel.deleteConversationsByUserId("guest")
     }
 }

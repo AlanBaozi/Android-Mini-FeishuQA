@@ -211,7 +211,9 @@ class MainActivity : AppCompatActivity() {
         // 如果未登录，删除所有 guest 用户的对话
         if (!SessionManager.isLoggedIn(this)) {
             lifecycleScope.launch {
+                // 同时从 MainViewModel 和 HistoryViewModel 中删除
                 viewModel.deleteGuestConversations()
+                mainView.deleteGuestConversations()
             }
         }
     }

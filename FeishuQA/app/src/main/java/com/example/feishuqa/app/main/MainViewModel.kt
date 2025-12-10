@@ -116,6 +116,7 @@ class MainViewModel(private val context: Context) : ViewModel() {
 
     /**
      * 加载历史对话列表
+     * 注意：现在历史对话列表由 HistoryViewModel 管理，这个方法主要用于计算知识点数量
      */
     fun loadConversations() {
         viewModelScope.launch {
@@ -125,7 +126,6 @@ class MainViewModel(private val context: Context) : ViewModel() {
                 // 计算知识点数量（基于加载到的对话列表）
                 val knowledgePoints = calculateKnowledgePointsFromList(conversations)
                 _uiState.value = _uiState.value.copy(
-                    conversations = conversations,
                     knowledgePointCount = knowledgePoints,
                     isLoading = false
                 )
@@ -228,54 +228,38 @@ class MainViewModel(private val context: Context) : ViewModel() {
 
     /**
      * 更新搜索关键词
+     * 注意：现在搜索功能由 HistoryViewModel 管理，这个方法保留用于兼容性
      */
+    @Deprecated("搜索功能已由 HistoryViewModel 管理", ReplaceWith("historyViewModel.updateSearchQuery(query)"))
     fun updateSearchQuery(query: String) {
-        _uiState.value = _uiState.value.copy(searchQuery = query)
+        // 已废弃，搜索功能由 HistoryViewModel 管理
     }
 
     /**
      * 删除对话
+     * 注意：现在删除功能由 HistoryViewModel 管理，这个方法保留用于兼容性
      */
+    @Deprecated("删除功能已由 HistoryViewModel 管理", ReplaceWith("historyViewModel.deleteConversation(conversationId)"))
     fun deleteConversation(conversationId: String) {
-        viewModelScope.launch {
-            try {
-                repository.deleteConversation(conversationId)
-                loadConversations() // 重新加载列表
-            } catch (e: Exception) {
-                _uiState.value = _uiState.value.copy(error = e.message)
-            }
-        }
+        // 已废弃，删除功能由 HistoryViewModel 管理
     }
 
     /**
      * 重命名对话
+     * 注意：现在重命名功能由 HistoryViewModel 管理，这个方法保留用于兼容性
      */
+    @Deprecated("重命名功能已由 HistoryViewModel 管理", ReplaceWith("historyViewModel.renameConversation(conversationId, newTitle)"))
     fun renameConversation(conversationId: String, newTitle: String) {
-        viewModelScope.launch {
-            try {
-                repository.renameConversation(conversationId, newTitle)
-                loadConversations() // 重新加载列表
-            } catch (e: Exception) {
-                _uiState.value = _uiState.value.copy(error = e.message)
-            }
-        }
+        // 已废弃，重命名功能由 HistoryViewModel 管理
     }
 
     /**
      * 切换置顶状态
+     * 注意：现在置顶功能由 HistoryViewModel 管理，这个方法保留用于兼容性
      */
+    @Deprecated("置顶功能已由 HistoryViewModel 管理", ReplaceWith("historyViewModel.togglePinConversation(conversationId)"))
     fun togglePinConversation(conversationId: String) {
-        viewModelScope.launch {
-            try {
-                val currentState = _uiState.value
-                val conversation = currentState.conversations.find { it.id == conversationId }
-                val newPinnedState = !(conversation?.isPinned ?: false)
-                repository.togglePinConversation(conversationId, newPinnedState)
-                loadConversations() // 重新加载列表
-            } catch (e: Exception) {
-                _uiState.value = _uiState.value.copy(error = e.message)
-            }
-        }
+        // 已废弃，置顶功能由 HistoryViewModel 管理
     }
 
     /**
@@ -295,8 +279,9 @@ class MainViewModel(private val context: Context) : ViewModel() {
      * 计算知识点数量（基于用户的历史对话和消息数）
      * 规则：每条对话算 100 个基础知识点，每条消息额外算 50 个
      */
-    private fun calculateKnowledgePoints(): Int {
-        return calculateKnowledgePointsFromList(_uiState.value.conversations)
+    private suspend fun calculateKnowledgePoints(): Int {
+        val conversations = repository.getConversations()
+        return calculateKnowledgePointsFromList(conversations)
     }
 
     /**
@@ -331,7 +316,7 @@ class MainViewModel(private val context: Context) : ViewModel() {
 
             try {
                 // 获取最近10条对话标题
-                val conversations = _uiState.value.conversations
+                val conversations = repository.getConversations()
                     .sortedByDescending { it.lastMessageTime }
                     .take(10)
                     .map { it.title }
@@ -452,40 +437,19 @@ data class RecommendedTopic(
 
 /**
  * 主界面UI状态
+ * 注意：历史对话列表现在由 HistoryViewModel 管理，这里不再包含 conversations 和 searchQuery
  */
 data class MainUiState(
-    val conversations: List<Conversation> = emptyList(),
     val isLoading: Boolean = false,
     val error: String? = null,
     val selectedModel: AIModel = AIModels.defaultModel,
     val isWebSearchEnabled: Boolean = false,
     val isTextInputMode: Boolean = true,
     val selectedConversationId: String? = null,
-    val searchQuery: String = "", // 搜索关键词
     val isLoggedIn: Boolean = false, // 是否已登录
     val userName: String? = null, // 当前登录用户名
     val userId: String? = null, // 当前登录用户ID
     val knowledgePointCount: Int = 0, // 知识点数量（基于历史对话）
     val recommendedTopics: List<RecommendedTopic> = emptyList(), // 推荐话题列表
     val isLoadingRecommendations: Boolean = false // 是否正在加载推荐
-) {
-    /**
-     * 获取过滤后的对话列表（根据搜索关键词和置顶状态排序）
-     */
-    fun getFilteredConversations(): List<Conversation> {
-        val filtered = if (searchQuery.isBlank()) {
-            conversations
-        } else {
-            conversations.filter {
-                it.title.contains(searchQuery, ignoreCase = true) ||
-                it.lastMessage?.contains(searchQuery, ignoreCase = true) == true
-            }
-        }
-        
-        // 置顶的排在前面，然后按时间倒序
-        return filtered.sortedWith(
-            compareByDescending<Conversation> { it.isPinned }
-                .thenByDescending { it.lastMessageTime }
-        )
-    }
-}
+)
