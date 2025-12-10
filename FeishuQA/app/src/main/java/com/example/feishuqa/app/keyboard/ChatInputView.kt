@@ -15,7 +15,7 @@ import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import android.view.inputmethod.InputMethodManager
-import android.widget.*
+import android.widget.LinearLayout
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.ViewModelStoreOwner
@@ -24,31 +24,19 @@ import com.bumptech.glide.load.DataSource
 import com.bumptech.glide.load.engine.GlideException
 import com.bumptech.glide.request.target.Target
 import com.example.feishuqa.R
-import com.example.feishuqa.app.keyboard.BarWaveView
 import com.example.feishuqa.common.utils.BaiduAsrManager
+import com.example.feishuqa.databinding.LayoutInputBarBinding
+import com.example.feishuqa.databinding.DialogFeishuVoiceBinding
+import com.example.feishuqa.databinding.DialogImagePreviewBinding
 
 class ChatInputView @JvmOverloads constructor(
     context: Context, attrs: AttributeSet? = null
 ) : LinearLayout(context, attrs) {
 
-    // 核心 UI
-    private var etInput: EditText
-    private var btnAttach: ImageButton
-    private var btnToggleInput: ImageButton
-    private var btnVoiceInput: TextView
-    private var btnSend: ImageButton
-
-    // 头部新功能
-    private var btnWebSearch: View
-    private var btnModelSelect: View
-    private var tvSelectedModel: TextView
-
-    // 图片预览 UI
-    private var layoutPreview: View? = null
-    private var ivPreview: ImageView? = null
-    private var btnDeletePreview: View? = null
-    private var viewPreviewMask: View? = null
-    private var pbPreviewLoading: ProgressBar? = null
+    // 1. 核心 Binding (替换原有的 View 成员变量)
+    // inflate(inflater, parent) 默认 attachToRoot=true，正好符合 merge 或 root 为 this 的情况
+    private val binding: LayoutInputBarBinding =
+        LayoutInputBarBinding.inflate(LayoutInflater.from(context), this,true)
 
     // 逻辑控制
     private lateinit var viewModel: ChatInputViewModel
@@ -66,10 +54,8 @@ class ChatInputView @JvmOverloads constructor(
 
     // Dialog 相关
     private var voiceDialog: Dialog? = null
-    private var barWaveView: BarWaveView? = null
-    private var tvStreamingText: TextView? = null
-    private var tvHintState: TextView? = null
-    private var bubbleContainer: View? = null
+    // 新增：持有 Voice Dialog 的 binding 引用，以便在回调中更新 UI
+    private var voiceBinding: DialogFeishuVoiceBinding? = null
 
     // ★★★ 新增：图片全屏预览 Dialog
     private var imagePreviewDialog: Dialog? = null
@@ -77,40 +63,48 @@ class ChatInputView @JvmOverloads constructor(
     interface ActionListener {
         fun requestRecordAudioPermission(): Boolean
         fun openImagePicker()
-        // fun onPreviewImageClick(uri: Any) // 如果不需要外部跳转 Activity，这个接口方法可以去掉了
         fun onWebSearchClick()
         fun onModelSelectClick()
-        
+
         /**
          * 检查是否已登录（用于发送消息前的检查）
-         * @return true表示已登录可以继续，false表示未登录
          */
         fun checkLoginBeforeSend(): Boolean = true
     }
 
     init {
         orientation = VERTICAL
-        val view = LayoutInflater.from(context).inflate(R.layout.layout_input_bar, this, true)
-
-        // 1. 绑定基础控件
-        etInput = view.findViewById(R.id.et_input)
-        btnAttach = view.findViewById(R.id.btn_attach)
-        btnToggleInput = view.findViewById(R.id.btn_toggle_input_mode)
-        btnVoiceInput = view.findViewById(R.id.btn_voice_input)
-        btnSend = view.findViewById(R.id.btn_send)
-
-        btnWebSearch = view.findViewById(R.id.btn_web_search)
-        btnModelSelect = view.findViewById(R.id.btn_model_select)
-        tvSelectedModel = view.findViewById(R.id.tv_selected_model)
-
-        // 2. 绑定预览控件
-        layoutPreview = view.findViewById(R.id.layoutPreview)
-        ivPreview = view.findViewById(R.id.ivPreview)
-        btnDeletePreview = view.findViewById(R.id.btnDeletePreview)
-        viewPreviewMask = view.findViewById(R.id.layoutPreviewLoading)
-        pbPreviewLoading = view.findViewById(R.id.pbPreviewLoading)
-
+        // Binding.inflate 已经完成了视图加载和绑定，此处不再需要 inflate 和 findViewById
         setupListeners()
+    }
+
+    fun updateModelName(name: String) {
+        // 使用 binding 访问，不再需要 findViewById
+        binding.tvSelectedModel.text = name
+    }
+
+    /**
+     * 公开方法：更新联网搜索按钮的 UI 状态
+     */
+    fun updateWebSearchState(isEnabled: Boolean) {
+        if (isEnabled) {
+            binding.btnWebSearch.setBackgroundResource(R.drawable.bg_chip_selected)
+            binding.tvWebSearch.setTextColor(context.getColor(R.color.feishu_blue))
+            binding.icWebSearch.setColorFilter(context.getColor(R.color.feishu_blue))
+        } else {
+            binding.btnWebSearch.setBackgroundResource(R.drawable.bg_chip_normal)
+            binding.tvWebSearch.setTextColor(context.getColor(R.color.text_secondary))
+            binding.icWebSearch.setColorFilter(context.getColor(R.color.text_secondary))
+        }
+    }
+
+    /**
+     * 公开方法：设置输入框内容并自动弹出键盘 (用于点击推荐问题)
+     */
+    fun setInputTextAndFocus(content: String) {
+        binding.etInput.setText(content)
+        binding.etInput.setSelection(content.length)
+        showKeyboard() // 调用内部已有的 showKeyboard 方法
     }
 
     fun setActionListener(listener: ActionListener) {
@@ -133,7 +127,7 @@ class ChatInputView @JvmOverloads constructor(
      * 清空输入框草稿内容（跳转界面时调用）
      */
     fun clearDraft() {
-        etInput.setText("")
+        binding.etInput.setText("")
         viewModel.clearPendingImage()
     }
 
@@ -142,42 +136,40 @@ class ChatInputView @JvmOverloads constructor(
         if (::baiduAsrManager.isInitialized) baiduAsrManager.destroy()
         handler.removeCallbacksAndMessages(null)
         dismissVoiceDialog()
-        // ★★★ 销毁图片预览弹窗
         dismissImagePreviewDialog()
     }
 
     private fun setupListeners() {
         // 发送逻辑
-        btnSend.setOnClickListener {
-            // 检查是否已登录
+        binding.btnSend.setOnClickListener {
             if (actionListener?.checkLoginBeforeSend() == false) {
                 return@setOnClickListener
             }
-            
-            val text = etInput.text.toString().trim()
-            if (text.isNotEmpty() || (layoutPreview?.visibility == View.VISIBLE)) {
+
+            val text = binding.etInput.text.toString().trim()
+            if (text.isNotEmpty() || (binding.layoutPreview.visibility == View.VISIBLE)) {
                 viewModel.sendMessage(text)
-                etInput.setText("")
+                binding.etInput.setText("")
             }
         }
 
         // 头部按钮
-        btnWebSearch.setOnClickListener { actionListener?.onWebSearchClick() }
-        btnModelSelect.setOnClickListener { actionListener?.onModelSelectClick() }
+        binding.btnWebSearch.setOnClickListener { actionListener?.onWebSearchClick() }
+        binding.btnModelSelect.setOnClickListener { actionListener?.onModelSelectClick() }
 
         // 图片逻辑
-        btnAttach.setOnClickListener { actionListener?.openImagePicker() }
-        btnDeletePreview?.setOnClickListener { viewModel.clearPendingImage() }
+        binding.btnAttach.setOnClickListener { actionListener?.openImagePicker() }
+        binding.btnDeletePreview.setOnClickListener { viewModel.clearPendingImage() }
 
-        // ★★★ 修改：点击小图直接在当前 View 弹出全屏预览
-        ivPreview?.setOnClickListener {
+        // 小图预览点击
+        binding.ivPreview.setOnClickListener {
             viewModel.pendingImageUri.value?.let { uri ->
                 showImagePreviewDialog(uri)
             }
         }
 
         // 输入监听
-        etInput.addTextChangedListener(object : TextWatcher {
+        binding.etInput.addTextChangedListener(object : TextWatcher {
             override fun afterTextChanged(s: Editable?) {}
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
@@ -186,7 +178,7 @@ class ChatInputView @JvmOverloads constructor(
         })
 
         // 模式切换
-        btnToggleInput.setOnClickListener {
+        binding.btnToggleInputMode.setOnClickListener {
             toggleInputMode()
         }
 
@@ -196,29 +188,25 @@ class ChatInputView @JvmOverloads constructor(
     // ★★★ 新增：显示全屏图片预览
     private fun showImagePreviewDialog(uri: Any) {
         if (imagePreviewDialog == null) {
-            // 使用全屏无标题样式，背景纯黑
-            imagePreviewDialog = Dialog(context, android.R.style.Theme_Black_NoTitleBar_Fullscreen).apply {
-                setContentView(R.layout.dialog_image_preview)
-                window?.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
-            }
+            imagePreviewDialog = Dialog(context, android.R.style.Theme_Black_NoTitleBar_Fullscreen)
         }
 
-        val ivFull = imagePreviewDialog?.findViewById<ImageView>(R.id.ivFullImage)
+        // 使用 Binding 加载 Dialog 布局
+        val dialogBinding = DialogImagePreviewBinding.inflate(LayoutInflater.from(context))
+        imagePreviewDialog?.setContentView(dialogBinding.root)
+        imagePreviewDialog?.window?.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
 
-        if (ivFull != null) {
-            // 加载原图
-            Glide.with(context)
-                .load(uri)
-                .fitCenter() // 保证图片完整显示
-                .into(ivFull)
+        // 加载原图
+        Glide.with(context)
+            .load(uri)
+            .fitCenter()
+            .into(dialogBinding.ivFullImage) // 假设 layout xml 中 id 为 ivFullImage
 
-            // 点击大图关闭预览
-            ivFull.setOnClickListener {
-                imagePreviewDialog?.dismiss()
-            }
+        // 点击大图关闭预览
+        dialogBinding.ivFullImage.setOnClickListener {
+            imagePreviewDialog?.dismiss()
         }
 
-        // 安全显示
         if ((context as? android.app.Activity)?.isFinishing == false) {
             imagePreviewDialog?.show()
         }
@@ -233,23 +221,23 @@ class ChatInputView @JvmOverloads constructor(
     }
 
     private fun updateSendButtonState() {
-        val hasText = etInput.text.toString().trim().isNotEmpty()
-        val hasImage = layoutPreview?.visibility == View.VISIBLE
-        btnSend.visibility = if (hasText || hasImage) View.VISIBLE else View.GONE
+        val hasText = binding.etInput.text.toString().trim().isNotEmpty()
+        val hasImage = binding.layoutPreview.visibility == View.VISIBLE
+        binding.btnSend.visibility = if (hasText || hasImage) View.VISIBLE else View.GONE
     }
 
     private fun toggleInputMode() {
         isVoiceMode = !isVoiceMode
         if (isVoiceMode) {
-            etInput.visibility = View.GONE
-            btnVoiceInput.visibility = View.VISIBLE
-            btnToggleInput.setImageResource(R.drawable.ic_keyboard) // 请确保有这个资源
+            binding.etInput.visibility = View.GONE
+            binding.btnVoiceInput.visibility = View.VISIBLE
+            binding.btnToggleInputMode.setImageResource(R.drawable.ic_keyboard)
             hideKeyboard()
-            btnSend.visibility = View.GONE
+            binding.btnSend.visibility = View.GONE
         } else {
-            etInput.visibility = View.VISIBLE
-            btnVoiceInput.visibility = View.GONE
-            btnToggleInput.setImageResource(R.drawable.ic_mic)
+            binding.etInput.visibility = View.VISIBLE
+            binding.btnVoiceInput.visibility = View.GONE
+            binding.btnToggleInputMode.setImageResource(R.drawable.ic_mic)
             showKeyboard()
             updateSendButtonState()
         }
@@ -261,52 +249,47 @@ class ChatInputView @JvmOverloads constructor(
     }
 
     private fun showKeyboard() {
-        etInput.requestFocus()
+        binding.etInput.requestFocus()
         val imm = context.getSystemService(Context.INPUT_METHOD_SERVICE) as? InputMethodManager
-        imm?.showSoftInput(etInput, InputMethodManager.SHOW_IMPLICIT)
+        imm?.showSoftInput(binding.etInput, InputMethodManager.SHOW_IMPLICIT)
     }
 
     // 处理图片预览 (小图)
     private fun handleImagePreview(uri: Any?) {
-        val previewLayout = layoutPreview ?: return
-        val imageView = ivPreview ?: return
-        val mask = viewPreviewMask
-        val pb = pbPreviewLoading
-
         if (uri != null) {
-            previewLayout.visibility = View.VISIBLE
-            mask?.visibility = View.VISIBLE
-            pb?.visibility = View.VISIBLE
+            binding.layoutPreview.visibility = View.VISIBLE
+            binding.layoutPreviewLoading.visibility = View.VISIBLE // 对应 viewPreviewMask
+            binding.pbPreviewLoading.visibility = View.VISIBLE
             updateSendButtonState()
 
             Glide.with(this).load(uri).centerCrop()
                 .listener(object : com.bumptech.glide.request.RequestListener<Drawable> {
                     override fun onLoadFailed(e: GlideException?, model: Any?, target: Target<Drawable>, isFirstResource: Boolean): Boolean {
-                        mask?.visibility = View.GONE
-                        pb?.visibility = View.GONE
+                        binding.layoutPreviewLoading.visibility = View.GONE
+                        binding.pbPreviewLoading.visibility = View.GONE
                         return false
                     }
                     override fun onResourceReady(resource: Drawable, model: Any, target: Target<Drawable>, dataSource: DataSource, isFirstResource: Boolean): Boolean {
                         handler.postDelayed({
-                            mask?.visibility = View.GONE
-                            pb?.visibility = View.GONE
+                            binding.layoutPreviewLoading.visibility = View.GONE
+                            binding.pbPreviewLoading.visibility = View.GONE
                         }, 300)
                         return false
                     }
-                }).into(imageView)
+                }).into(binding.ivPreview)
         } else {
-            previewLayout.visibility = View.GONE
+            binding.layoutPreview.visibility = View.GONE
             updateSendButtonState()
         }
     }
 
     @SuppressLint("ClickableViewAccessibility")
     private fun setupVoiceTouchListener() {
-        btnVoiceInput.setOnTouchListener { v, event ->
+        binding.btnVoiceInput.setOnTouchListener { _, event ->
             when (event.action) {
                 MotionEvent.ACTION_DOWN -> {
-                    btnVoiceInput.text = "松开 发送"
-                    btnVoiceInput.alpha = 0.7f
+                    binding.btnVoiceInput.text = "松开 发送"
+                    binding.btnVoiceInput.alpha = 0.7f
                     if (actionListener?.requestRecordAudioPermission() == true) startRecording()
                     true
                 }
@@ -315,17 +298,17 @@ class ChatInputView @JvmOverloads constructor(
                     true
                 }
                 MotionEvent.ACTION_UP -> {
-                    btnVoiceInput.text = "按住 说话"
-                    btnVoiceInput.alpha = 1.0f
+                    binding.btnVoiceInput.text = "按住 说话"
+                    binding.btnVoiceInput.alpha = 1.0f
                     if (isCanceling) stopRecording(true) else {
-                        barWaveView?.updateVolume(0f)
+                        voiceBinding?.barWaveView?.updateVolume(0f)
                         handler.postDelayed({ stopRecording(false) }, 100)
                     }
                     true
                 }
                 MotionEvent.ACTION_CANCEL -> {
-                    btnVoiceInput.text = "按住 说话"
-                    btnVoiceInput.alpha = 1.0f
+                    binding.btnVoiceInput.text = "按住 说话"
+                    binding.btnVoiceInput.alpha = 1.0f
                     stopRecording(true)
                     true
                 }
@@ -338,7 +321,9 @@ class ChatInputView @JvmOverloads constructor(
     private fun initBaiduAsr(appContext: Context) {
         baiduAsrManager = BaiduAsrManager(appContext, object : BaiduAsrManager.AsrListener {
             override fun onReady() = updateDisplayText()
-            override fun onVolumeChanged(volumePercent: Float) { if (isRecording) barWaveView?.updateVolume(volumePercent / 2) }
+            override fun onVolumeChanged(volumePercent: Float) {
+                if (isRecording) voiceBinding?.barWaveView?.updateVolume(volumePercent / 2)
+            }
             override fun onPartialResult(text: String) { currentStreamText = text; updateDisplayText() }
             override fun onFinalResult(text: String) { speechBuffer.append(text); currentStreamText = "" }
             override fun onFinish() {
@@ -362,7 +347,7 @@ class ChatInputView @JvmOverloads constructor(
     }
 
     private fun stopRecording(cancel: Boolean) {
-        isRecording = false; barWaveView?.updateVolume(0f)
+        isRecording = false; voiceBinding?.barWaveView?.updateVolume(0f)
         if (cancel) { isCanceling = true; resetVoiceState(); baiduAsrManager.cancel(); return }
         if (speechBuffer.isEmpty() && currentStreamText.isEmpty()) {
             if (System.currentTimeMillis() - startTime < 800) {
@@ -376,39 +361,54 @@ class ChatInputView @JvmOverloads constructor(
     private fun commitResult() {
         val finalText = speechBuffer.toString()
         if (finalText.isNotEmpty()) {
-            etInput.append(finalText)
+            binding.etInput.append(finalText)
             if(isVoiceMode) toggleInputMode()
         }
         resetVoiceState(); handler.postDelayed({ dismissVoiceDialog() }, 150)
     }
 
     private fun resetVoiceState() { speechBuffer.clear(); currentStreamText = ""; dismissVoiceDialog() }
-    private fun updateDisplayText() { tvStreamingText?.text = "$speechBuffer$currentStreamText".ifEmpty { "..." } }
+
+    private fun updateDisplayText() {
+        voiceBinding?.tvStreamingText?.text = "$speechBuffer$currentStreamText".ifEmpty { "..." }
+    }
 
     private fun updateCancelState(cancel: Boolean) {
         if (isCanceling == cancel) return
         isCanceling = cancel
         if (isCanceling) {
-            tvHintState?.text = "松开手指，取消发送"; tvHintState?.setTextColor(Color.RED); bubbleContainer?.alpha = 0.5f
+            voiceBinding?.tvHintState?.text = "松开手指，取消发送"
+            voiceBinding?.tvHintState?.setTextColor(Color.RED)
+            voiceBinding?.bubbleContainer?.alpha = 0.5f
         } else {
-            tvHintState?.text = "松开转文字，上滑取消"; tvHintState?.setTextColor(Color.parseColor("#999999")); bubbleContainer?.alpha = 1.0f
+            voiceBinding?.tvHintState?.text = "松开转文字，上滑取消"
+            voiceBinding?.tvHintState?.setTextColor(Color.parseColor("#999999"))
+            voiceBinding?.bubbleContainer?.alpha = 1.0f
         }
     }
 
     private fun showVoiceDialog() {
         if (voiceDialog == null) {
             voiceDialog = Dialog(context, android.R.style.Theme_Translucent_NoTitleBar_Fullscreen).apply {
-                setContentView(R.layout.dialog_feishu_voice)
                 setCancelable(false)
             }
-            barWaveView = voiceDialog?.findViewById(R.id.barWaveView)
-            tvStreamingText = voiceDialog?.findViewById(R.id.tvStreamingText)
-            tvHintState = voiceDialog?.findViewById(R.id.tvHintState)
-            bubbleContainer = voiceDialog?.findViewById(R.id.bubbleContainer)
         }
+
+        // 使用 Binding 加载 Dialog 视图
+        if (voiceBinding == null) {
+            voiceBinding = DialogFeishuVoiceBinding.inflate(LayoutInflater.from(context))
+            voiceDialog?.setContentView(voiceBinding!!.root)
+        }
+
         isCanceling = false
-        tvHintState?.text = "松开转文字，上滑取消"; tvHintState?.setTextColor(Color.parseColor("#999999"))
-        tvStreamingText?.text = ""; bubbleContainer?.alpha = 1.0f; barWaveView?.updateVolume(0f)
+        voiceBinding?.apply {
+            tvHintState.text = "松开转文字，上滑取消"
+            tvHintState.setTextColor(Color.parseColor("#999999"))
+            tvStreamingText.text = ""
+            bubbleContainer.alpha = 1.0f
+            barWaveView.updateVolume(0f)
+        }
+
         if ((context as? android.app.Activity)?.isFinishing == false) voiceDialog?.show()
     }
 
